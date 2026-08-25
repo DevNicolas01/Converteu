@@ -8,9 +8,19 @@
 
   <link rel="icon" type="image/x-icon" href="fav.ico">
 
-  <title>Orçei — Arrow Shot</title>
+  <title>Orçamentei — Arrow Shot</title>
 
   <link rel="stylesheet" href="style.css">
+
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("orcei-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
@@ -31,13 +41,15 @@
         </div>
 
         <div class="brand-info">
-          <h1 class="brand">Orçei</h1>
-          <p class="subtitle">Ferramenta da Arrow Shot</p>
+          <h1 class="brand">Orça<span>mentei</span></h1>
+          <p class="subtitle">Orçamentos da Arrow Shot</p>
         </div>
 
       </div>
 
       <!-- Navegação -->
+      <div class="nav-area">
+
       <nav class="tabnav" id="tabnav">
 
         <button class="tabbtn active" data-tab="calc">
@@ -56,7 +68,7 @@
             <line x1="16" y1="19" x2="16" y2="19"></line>
           </svg>
 
-          Calculadora
+          Novo orçamento
 
         </button>
 
@@ -70,7 +82,7 @@
             <rect x="14" y="14" width="7" height="7" rx="1"></rect>
           </svg>
 
-          Funil
+          Propostas
 
         </button>
 
@@ -83,11 +95,30 @@
             <line x1="20" y1="20" x2="20" y2="14"></line>
           </svg>
 
-          Painel
+          Resultados
 
         </button>
 
       </nav>
+
+        <button class="theme-toggle" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">
+          <svg class="icon icon-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4"></circle>
+            <line x1="12" y1="2" x2="12" y2="4"></line>
+            <line x1="12" y1="20" x2="12" y2="22"></line>
+            <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line>
+            <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
+            <line x1="2" y1="12" x2="4" y2="12"></line>
+            <line x1="20" y1="12" x2="22" y2="12"></line>
+            <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line>
+            <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
+          </svg>
+          <svg class="icon icon-moon" viewBox="0 0 24 24">
+            <path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"></path>
+          </svg>
+        </button>
+
+      </div>
 
     </header>
 
@@ -119,6 +150,9 @@
 
   </div>
 
+
+  <!-- Geração de PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- JavaScript -->
   <script src="app.js"></script>
