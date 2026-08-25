@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canteiro — Arrow Shot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1 class="brand">Canteiro</h1>
+        <p class="subtitle">Custo, proposta e funil — Arrow Shot</p>
+      </div>
+      <nav class="tabnav" id="tabnav">
+        <button class="tabbtn active" data-tab="calc">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="11" x2="8" y2="11"></line><line x1="12" y1="11" x2="12" y2="11"></line><line x1="16" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="8" y2="15"></line><line x1="12" y1="15" x2="12" y2="15"></line><line x1="16" y1="15" x2="16" y2="15"></line><line x1="8" y1="19" x2="8" y2="19"></line><line x1="12" y1="19" x2="12" y2="19"></line><line x1="16" y1="19" x2="16" y2="19"></line></svg>
+          Calculadora
+        </button>
+        <button class="tabbtn" data-tab="funil">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+          Funil
+        </button>
+        <button class="tabbtn" data-tab="painel">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="4" y1="20" x2="4" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="20" y1="20" x2="20" y2="14"></line></svg>
+          Painel
+        </button>
+      </nav>
+    </header>
+
+    <main class="main">
+      <section id="tab-calc" class="tab-panel"></section>
+      <section id="tab-funil" class="tab-panel hidden"></section>
+      <section id="tab-painel" class="tab-panel hidden"></section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
