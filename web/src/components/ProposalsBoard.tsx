@@ -3,6 +3,7 @@ import { STAGES, formatBRL, num, type Deal } from "../lib/calc";
 import { buildWhatsAppShareLink } from "../lib/db";
 import { MESSAGE_TEMPLATES } from "../lib/templates";
 import { downloadClientPdf } from "../lib/pdf";
+import PresentationView from "./PresentationView";
 
 interface Props {
   deals: Deal[];
@@ -21,6 +22,7 @@ function daysSince(iso: string | null | undefined) {
 }
 
 function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage, onSetFollowUpDate }: Props & { deal: Deal }) {
+  const [presenting, setPresenting] = useState(false);
   const [templateId, setTemplateId] = useState(MESSAGE_TEMPLATES[0].id);
   const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) || MESSAGE_TEMPLATES[0];
   const message = template.build(deal, companyName, num(deal.valorFinal));
@@ -96,6 +98,9 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
         </select>
 
         <div className="deal-actions">
+          <button type="button" className="icon-action-btn primary" onClick={() => setPresenting(true)}>
+            Apresentar
+          </button>
           <button type="button" className="icon-action-btn" onClick={sendWhatsApp}>
             WhatsApp
           </button>
@@ -110,6 +115,10 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
           </button>
         </div>
       </div>
+
+      {presenting && (
+        <PresentationView deal={deal} companyName={companyName} logoUrl={logoUrl} onClose={() => setPresenting(false)} />
+      )}
     </div>
   );
 }

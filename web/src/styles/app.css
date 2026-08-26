@@ -96,6 +96,145 @@
   }
 }
 
+.pres-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--n-100);
+  color: var(--n-950);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+:root:not([data-theme="dark"]) .pres-overlay {
+  background: #14203a;
+  color: #ffffff;
+}
+
+.pres-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.pres-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pres-slide {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pres-logo {
+  max-height: 64px;
+  margin-bottom: 8px;
+}
+
+.pres-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  opacity: 0.65;
+  margin: 0;
+}
+
+.pres-title {
+  font-size: clamp(24px, 5vw, 38px);
+  margin: 0;
+  font-weight: 700;
+}
+
+.pres-h2 {
+  font-size: clamp(22px, 4.5vw, 34px);
+  margin: 0;
+  font-weight: 700;
+}
+
+.pres-sub {
+  opacity: 0.75;
+  margin: 0;
+  font-size: 15px;
+}
+
+.pres-body {
+  font-size: clamp(16px, 2.6vw, 20px);
+  line-height: 1.5;
+  white-space: pre-line;
+  margin: 0;
+}
+
+.pres-list {
+  text-align: left;
+  font-size: clamp(15px, 2.4vw, 19px);
+  line-height: 1.9;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.pres-price {
+  font-size: clamp(40px, 9vw, 72px);
+  font-weight: 800;
+  margin: 8px 0;
+  color: var(--amber-400);
+}
+
+.pres-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+.pres-nav button {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 24px;
+}
+
+.pres-nav button:disabled {
+  opacity: 0.25;
+}
+
+.pres-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.pres-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pres-dot.active {
+  background: var(--amber-400);
+  width: 18px;
+}
+
 .checklist-panel {
   margin-bottom: 16px;
 }

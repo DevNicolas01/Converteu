@@ -15,6 +15,7 @@ import {
 } from "../lib/calc";
 import { downloadClientPdf, downloadInternalPdf } from "../lib/pdf";
 import VisitChecklistTips from "./VisitChecklistTips";
+import PresentationView from "./PresentationView";
 
 interface Props {
   initialDeal?: Deal | null;
@@ -37,6 +38,7 @@ function field(label: string, input: React.ReactNode, key: string) {
 export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumero, onSave, onCancelEdit }: Props) {
   const [deal, setDeal] = useState<Deal>(() => initialDeal || emptyDeal());
   const [saving, setSaving] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [saveError, setSaveError] = useState(false);
 
@@ -322,6 +324,9 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
           <button className="save-btn" onClick={handleSave} disabled={saving}>
             {isEditing ? "Salvar alterações" : "Salvar e enviar para propostas"}
           </button>
+          <button className="pdf-btn" onClick={() => setPresenting(true)} type="button" title="Mostra a proposta em slides, pra apresentar no celular/tablet">
+            Apresentar
+          </button>
           <button className="pdf-btn" onClick={handleDownloadClientPdf} type="button" title="Proposta limpa, sem detalhamento de custos — pra mandar ao cliente">
             PDF para o cliente
           </button>
@@ -356,6 +361,14 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
         <p className="microlabel">Custo por m²: {formatBRL(calc.custoPorM2)}</p>
       </div>
       </div>
+      {presenting && (
+        <PresentationView
+          deal={{ ...deal, valorFinal: calc.valorFinal }}
+          companyName={companyName}
+          logoUrl={logoUrl}
+          onClose={() => setPresenting(false)}
+        />
+      )}
     </>
   );
 }
