@@ -56,6 +56,13 @@ function getGoogleOAuthStartUrl() {
 let currentAccountId = null;
 let currentIsAdmin = false;
 
+/**
+ * accountId sempre é o uid do dono da conta (convenção usada desde a criação da conta,
+ * seja via script de bootstrap ou via adminCreateAccount). Isso evita depender de custom
+ * claims (que só um backend com Admin SDK pode definir) pra saber "de quem é essa conta".
+ * Admin não tem conta própria — só enxerga a de um cliente via ?viewAs=<accountId> na URL,
+ * usando o acesso amplo que as regras do Firestore já dão pra quem tem a claim admin.
+ */
 async function refreshClaims() {
   const user = auth.currentUser;
   if (!user) {
@@ -65,8 +72,17 @@ async function refreshClaims() {
   }
   await user.getIdToken(true);
   const { claims } = await user.getIdTokenResult();
-  currentAccountId = claims.accountId ?? null;
   currentIsAdmin = claims.admin === true;
+  if (currentIsAdmin) {
+    currentAccountId = new URLSearchParams(location.search).get("viewAs") || null;
+  } else {
+    currentAccountId = user.uid;
+  }
+}
+
+/** Se true, o usuário admin logado está vendo o painel do cliente (via ?viewAs=). */
+function isImpersonatingAccount() {
+  return currentIsAdmin && !!currentAccountId;
 }
 
 function requireAccountId() {
@@ -309,4 +325,6 @@ window.OrceiDB = {
   buildWhatsAppShareLink,
   migrateFromLocalStorage,
   isAdmin: () => currentIsAdmin,
+  isImpersonatingAccount,
+  getCurrentAccountId: () => currentAccountId,
 };

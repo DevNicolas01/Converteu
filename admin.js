@@ -41,8 +41,12 @@ async function loadAccounts() {
           <td>${esc(acc.status)}${isExpired ? " (vencida)" : ""}</td>
           <td>${formatDate(expiresAt)}</td>
           <td>${s.totalPropostas ?? 0}</td>
+          <td>${s.abertas ?? 0}</td>
+          <td>${formatBRL(s.valorEmAberto)}</td>
+          <td>${s.fechados ?? 0}</td>
           <td>${formatBRL(s.valorTotalFechado)}</td>
           <td style="white-space:nowrap;">
+            <a class="link-btn" href="index.html?viewAs=${encodeURIComponent(acc.id)}" target="_blank" rel="noopener">ver como cliente</a>
             <button class="link-btn" data-renew="${esc(acc.id)}">+1 mês</button>
             <button class="link-btn" data-toggle="${esc(acc.id)}" data-status="${esc(acc.status)}">
               ${acc.status === "active" ? "suspender" : "ativar"}
@@ -57,10 +61,10 @@ async function loadAccounts() {
         <thead>
           <tr>
             <th>Empresa</th><th>E-mail</th><th>Status</th><th>Vence em</th>
-            <th>Propostas</th><th>Faturado (fechado)</th><th>Ações</th>
+            <th>Propostas</th><th>Abertas</th><th>Em aberto (R$)</th><th>Fechados</th><th>Faturado (fechado)</th><th>Ações</th>
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="7">Nenhuma conta ainda.</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="10">Nenhuma conta ainda.</td></tr>`}</tbody>
       </table>
     `;
 
@@ -121,27 +125,25 @@ function attachCreateAccountForm() {
   document.getElementById("btn-create-account").addEventListener("click", async () => {
     const companyName = document.getElementById("new-company-name").value.trim();
     const email = document.getElementById("new-company-email").value.trim();
-    const password = document.getElementById("new-company-password").value;
     const months = Number(document.getElementById("new-company-months").value) || 1;
     const msgEl = document.getElementById("create-account-msg");
 
-    if (!companyName || !email || !password) {
-      msgEl.textContent = "Preencha nome, e-mail e senha.";
+    if (!companyName || !email) {
+      msgEl.textContent = "Preencha nome e e-mail.";
       return;
     }
 
     msgEl.textContent = "Criando...";
     try {
-      await window.OrceiAdmin.adminCreateAccount({ companyName, email, password, subscriptionMonths: months });
-      msgEl.textContent = "Conta criada!";
+      await window.OrceiAdmin.adminCreateAccount({ companyName, email, subscriptionMonths: months });
+      msgEl.textContent = "Conta criada! O cliente vai receber um e-mail pra definir a senha.";
       document.getElementById("new-company-name").value = "";
       document.getElementById("new-company-email").value = "";
-      document.getElementById("new-company-password").value = "";
       document.getElementById("new-company-months").value = "1";
       await loadAccounts();
     } catch (e) {
       console.error("Falha ao criar conta", e);
-      msgEl.textContent = "Não foi possível criar a conta.";
+      msgEl.textContent = "Não foi possível criar a conta: " + (e?.code || e?.message || e);
     }
   });
 }

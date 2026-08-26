@@ -1227,6 +1227,13 @@ function boot() {
       return;
     }
 
+    if (window.OrceiDB.isAdmin() && !window.OrceiDB.isImpersonatingAccount()) {
+      showScreen("login");
+      document.getElementById("login-error").textContent =
+        "Conta admin não tem painel próprio. Use \"ver como cliente\" no painel admin.";
+      return;
+    }
+
     let status;
     try {
       status = await window.OrceiDB.getAccountStatus();
@@ -1234,6 +1241,14 @@ function boot() {
       console.error("Falha ao ler status da conta", err);
       showScreen("login");
       return;
+    }
+
+    const banner = document.getElementById("viewas-banner");
+    if (window.OrceiDB.isImpersonatingAccount()) {
+      document.getElementById("viewas-company").textContent = status.companyName || status.email || "-";
+      banner.classList.remove("hidden");
+    } else {
+      banner.classList.add("hidden");
     }
 
     if (!status.isActiveAndValid) {

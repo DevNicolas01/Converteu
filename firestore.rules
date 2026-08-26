@@ -7,12 +7,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Admin por custom claim (definida uma vez via script, para o primeiro admin) OU por
+    // ter um doc em admins/{uid} — isso permite que um admin já existente adicione outros
+    // direto pelo site, sem precisar de Cloud Function/Admin SDK pra isso.
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     function ownsAccount(accountId) {
-      return isSignedIn() && request.auth.token.accountId == accountId;
+      return isSignedIn() && request.auth.uid == accountId;
     }
 
     function hasActiveSubscription(accountId) {
@@ -48,7 +54,7 @@ service cloud.firestore {
 
     match /admins/{uid} {
       allow read: if isAdmin();
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     match /googleTokens/{accountId} {

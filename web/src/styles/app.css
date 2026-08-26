@@ -1,0 +1,393 @@
+/* Utilitários responsivos do app React — complementam legacy.css */
+
+/* Sem isso, o navegador desenha os controles nativos (ícone do date picker, setas de
+   select, scrollbar) sempre na versão clara, mesmo com o resto da tela escuro — ficam
+   "apagados"/ilegíveis. O color-scheme avisa o navegador de que paleta usar. */
+:root {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.save-msg.is-error {
+  color: var(--red-400);
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--n-800);
+  background: var(--n-900);
+  color: var(--n-300);
+  font-size: 13px;
+}
+
+.quote-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.funil-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.produtos-table {
+  margin-bottom: 8px;
+}
+
+.produtos-row {
+  display: grid;
+  grid-template-columns: 2fr 70px 110px 100px auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.produtos-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--n-500);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.produtos-subtotal {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--n-300);
+}
+
+@media (max-width: 640px) {
+  .produtos-row {
+    grid-template-columns: 1fr;
+  }
+
+  .produtos-header {
+    display: none;
+  }
+}
+
+.checklist-panel {
+  margin-bottom: 16px;
+}
+
+.checklist-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  gap: 12px;
+}
+
+.checklist-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--n-800);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.checklist-progress-fill {
+  height: 100%;
+  background: var(--amber-400);
+  border-radius: 999px;
+  transition: width 0.2s;
+}
+
+.checklist-items {
+  margin-top: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--n-300);
+  cursor: pointer;
+}
+
+.checklist-item:hover {
+  background: var(--n-950);
+}
+
+.checklist-item input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--amber-400);
+  flex-shrink: 0;
+}
+
+.checklist-item.checked span {
+  color: var(--n-500);
+  text-decoration: line-through;
+}
+
+.hint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--amber-300);
+  color: var(--amber-500);
+  border: 1px solid var(--amber-500);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.hint-banner button {
+  color: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.deal-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.deal-card-value {
+  font-weight: 700;
+  color: var(--amber-400);
+  font-size: 15px;
+}
+
+.stage-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.stage-pill {
+  border: 1px solid var(--n-800);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--n-500);
+  background: var(--n-950);
+}
+
+.stage-pill.active {
+  background: var(--amber-400);
+  border-color: var(--amber-400);
+  color: #fff;
+}
+
+.deal-card-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--n-800);
+}
+
+.deal-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--n-800);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n-300);
+  background: var(--n-950);
+}
+
+.icon-action-btn:hover {
+  border-color: var(--amber-400);
+  color: var(--amber-400);
+}
+
+.icon-action-btn.danger:hover {
+  border-color: var(--red-400);
+  color: var(--red-400);
+}
+
+.icon-action-btn.danger-filled {
+  background: var(--red-400);
+  border-color: var(--red-400);
+  color: #fff;
+}
+
+.icon-action-btn.danger-filled:hover {
+  filter: brightness(1.08);
+  color: #fff;
+}
+
+.icon-action-btn.primary {
+  background: var(--amber-400);
+  border-color: var(--amber-400);
+  color: #fff;
+}
+
+.icon-action-btn.primary:hover {
+  filter: brightness(1.08);
+  color: #fff;
+}
+
+.account-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.renew-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.renew-inline .input {
+  width: 56px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.admin-accounts-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.account-card {
+  display: grid;
+  grid-template-columns: 56px 1.6fr 1.6fr auto;
+  grid-template-areas:
+    "logo name meta actions"
+    "logo email meta actions";
+  gap: 6px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--n-800);
+  border-radius: 10px;
+  background: var(--n-900);
+}
+
+.account-card-meta {
+  grid-area: meta;
+  display: flex;
+  gap: 4px 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  align-self: center;
+}
+
+.account-card-details {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--n-800);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  font-size: 13px;
+}
+
+.account-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--n-950);
+  border: 1px solid var(--n-800);
+}
+
+.account-logo-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--n-950);
+  border: 1px solid var(--n-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--n-600);
+}
+
+@media (max-width: 860px) {
+  .quote-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .funil-grid {
+    grid-template-columns: minmax(220px, 1fr);
+  }
+
+  .account-card {
+    grid-template-columns: 40px 1fr;
+    grid-template-areas:
+      "logo name"
+      "logo email"
+      "meta meta"
+      "actions actions";
+  }
+
+  .topbar {
+    padding: 10px 14px;
+  }
+
+  main.main {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+}

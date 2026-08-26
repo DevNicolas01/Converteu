@@ -1,13 +1,26 @@
-import { auth, db, functions } from "./firebase-client.js";
+import { auth, db } from "./firebase-client.js";
+import { firebaseConfig } from "./firebase-config.js";
 import {
   collection,
   doc,
   getDoc,
   getDocs,
+  setDoc,
   updateDoc,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+// Mesmos ids de estágio definidos em app.js (STAGES) — duplicado aqui de propósito:
+// app.js é script clássico (não-module), então não dá pra importar isso de lá.
+const CLOSED_STAGE = "fechado";
+const LOST_STAGE = "perdido";
 
 /** Confirma (via refresh de token) se o usuário logado tem a custom claim admin. */
 async function isCurrentUserAdmin() {
@@ -23,11 +36,47 @@ async function adminListAccounts() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/** Cria uma conta de cliente nova via Cloud Function. */
-async function adminCreateAccount({ companyName, email, password, subscriptionMonths = 1 }) {
-  const fn = httpsCallable(functions, "adminCreateAccount");
-  const { data } = await fn({ companyName, email, password, subscriptionMonths });
-  return data;
+/**
+ * Cria o usuário de autenticação num app Firebase secundário (mesmo projeto), pra não
+ * derrubar a sessão do admin que está logado no app principal. Sem isso, criar um usuário
+ * pelo SDK client-side loga automaticamente nele, substituindo a sessão do admin. A senha
+ * é só um valor temporário aleatório — o dono da conta nunca chega a saber ela, porque
+ * define a própria senha pelo e-mail de redefinição enviado logo em seguida.
+ */
+async function createAuthUserWithoutSignIn(email) {
+  const secondaryApp = initializeApp(firebaseConfig, `admin-create-${Date.now()}`);
+  const secondaryAuth = getAuth(secondaryApp);
+  const tempPassword = crypto.randomUUID();
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+    const uid = cred.user.uid;
+    await signOut(secondaryAuth);
+    return uid;
+  } finally {
+    await deleteApp(secondaryApp);
+  }
+}
+
+/**
+ * Cria uma conta de cliente nova: usuário de auth (com senha temporária descartável) +
+ * doc em accounts/{uid}, direto via Firestore (as regras liberam write pra quem tem a
+ * claim admin). accountId == uid do dono, por convenção. Em seguida dispara o e-mail de
+ * redefinição de senha do Firebase, pra o cliente escolher a própria senha.
+ */
+async function adminCreateAccount({ companyName, email, subscriptionMonths = 1 }) {
+  const uid = await createAuthUserWithoutSignIn(email);
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + subscriptionMonths);
+  await setDoc(doc(db, "accounts", uid), {
+    companyName,
+    email,
+    ownerUid: uid,
+    status: "active",
+    subscriptionExpiresAt: Timestamp.fromDate(expiresAt),
+    createdAt: Timestamp.now(),
+  });
+  await sendPasswordResetEmail(auth, email);
+  return { accountId: uid };
 }
 
 async function getAccountExpiry(accountId) {
@@ -51,11 +100,33 @@ async function adminSetAccountStatus(accountId, status) {
   await updateDoc(doc(db, "accounts", accountId), { status });
 }
 
-/** Busca as métricas agregadas de todos os clientes via Cloud Function. */
+/**
+ * Métricas por conta, calculadas direto no cliente a partir das propostas (admin tem
+ * leitura liberada em accounts/*/proposals pelas regras). Sem Cloud Function.
+ */
 async function adminGetDashboardStats() {
-  const fn = httpsCallable(functions, "adminDashboardStats");
-  const { data } = await fn();
-  return data;
+  const accounts = await adminListAccounts();
+  return Promise.all(accounts.map(async (acc) => {
+    const snap = await getDocs(collection(db, "accounts", acc.id, "proposals"));
+    let totalPropostas = 0;
+    let abertas = 0;
+    let fechados = 0;
+    let valorTotalFechado = 0;
+    let valorEmAberto = 0;
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      const valor = Number(data.valor) || 0;
+      totalPropostas += 1;
+      if (data.status === CLOSED_STAGE) {
+        fechados += 1;
+        valorTotalFechado += valor;
+      } else if (data.status !== LOST_STAGE) {
+        abertas += 1;
+        valorEmAberto += valor;
+      }
+    });
+    return { accountId: acc.id, totalPropostas, abertas, fechados, valorTotalFechado, valorEmAberto };
+  }));
 }
 
 window.OrceiAdmin = {
