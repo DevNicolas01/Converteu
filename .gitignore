@@ -3,5 +3,6 @@ functions/lib/
 service-account.json
 firebase-config.js
 .firebase/
+.vercel/
 *.log
 firestore-debug.log
