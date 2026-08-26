@@ -158,6 +158,9 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
 
   return (
     <div id="app">
+      <a href="#main-content" className="skip-link">
+        Pular para o conteúdo
+      </a>
       {asAdmin && (
         <div style={{ background: "#7c3aed", color: "#fff", textAlign: "center", padding: "8px 12px", fontSize: 13 }}>
           Você está vendo o painel como o cliente <strong>{company?.companyName || status.companyName || status.email}</strong> (modo admin).{" "}
@@ -179,14 +182,14 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
           </div>
         </div>
         <div className="nav-area">
-          <nav className="tabnav">
-            <button className={`tabbtn${tab === "calc" ? " active" : ""}`} onClick={() => setTab("calc")}>
+          <nav className="tabnav" aria-label="Seções do painel">
+            <button className={`tabbtn${tab === "calc" ? " active" : ""}`} aria-current={tab === "calc" ? "page" : undefined} onClick={() => setTab("calc")}>
               Novo orçamento
             </button>
-            <button className={`tabbtn${tab === "funil" ? " active" : ""}`} onClick={() => setTab("funil")}>
+            <button className={`tabbtn${tab === "funil" ? " active" : ""}`} aria-current={tab === "funil" ? "page" : undefined} onClick={() => setTab("funil")}>
               Propostas
             </button>
-            <button className={`tabbtn${tab === "painel" ? " active" : ""}`} onClick={() => setTab("painel")}>
+            <button className={`tabbtn${tab === "painel" ? " active" : ""}`} aria-current={tab === "painel" ? "page" : undefined} onClick={() => setTab("painel")}>
               Resultados
             </button>
           </nav>
@@ -214,7 +217,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         </Modal>
       )}
 
-      <main className="main">
+      <main className="main" id="main-content">
         {tab === "calc" && !company?.logoUrl && !hintDismissed && (
           <div className="hint-banner">
             <span>

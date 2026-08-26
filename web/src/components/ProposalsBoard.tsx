@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { STAGES, formatBRL, num, type Deal } from "../lib/calc";
 import { buildWhatsAppShareLink } from "../lib/db";
 import { MESSAGE_TEMPLATES } from "../lib/templates";
@@ -26,6 +26,8 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
   const [templateId, setTemplateId] = useState(MESSAGE_TEMPLATES[0].id);
   const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) || MESSAGE_TEMPLATES[0];
   const message = template.build(deal, companyName, num(deal.valorFinal));
+  const followUpId = useId();
+  const templateSelectId = useId();
 
   // WhatsApp e e-mail não deixam anexar arquivo por link (limitação da própria plataforma,
   // não dá pra contornar via navegador) — então a gente baixa o PDF automaticamente e já
@@ -51,25 +53,27 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
   }
 
   const sentDays = daysSince(deal.sentAt);
+  const stageLabel = STAGES.find((s) => s.id === deal.stage)?.label || deal.stage;
 
   return (
     <div className="deal-card">
       <div className="deal-card-top">
-        <strong onClick={() => onEdit(deal)} style={{ cursor: "pointer" }}>
+        <button type="button" className="deal-name" onClick={() => onEdit(deal)}>
           {deal.clientName || "Sem nome"}
-        </strong>
-        <span className="deal-card-value">{formatBRL(deal.valorFinal)}</span>
+        </button>
+        <span className="deal-value">{formatBRL(deal.valorFinal)}</span>
       </div>
       {deal.stage === "aguardando" && sentDays !== null && (
-        <p className="microlabel">Enviada há {sentDays} dia(s)</p>
+        <p className="deal-meta">Enviada há {sentDays} dia(s)</p>
       )}
 
-      <div className="stage-pills">
+      <div className="stage-pills" role="group" aria-label={`Status da proposta de ${deal.clientName || "cliente sem nome"}: ${stageLabel}`}>
         {STAGES.map((s) => (
           <button
             key={s.id}
             type="button"
             className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
+            aria-pressed={deal.stage === s.id}
             onClick={() => onChangeStage(deal, s.id)}
           >
             {s.label}
@@ -77,9 +81,12 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
         ))}
       </div>
 
-      <div className="field" style={{ marginBottom: 0 }}>
-        <label className="microlabel">Próximo follow-up</label>
+      <div className="field" style={{ marginBottom: 0, marginTop: 10 }}>
+        <label htmlFor={followUpId} className="microlabel">
+          Próximo follow-up
+        </label>
         <input
+          id={followUpId}
           className="input"
           type="date"
           value={deal.followUpDate || ""}
@@ -88,8 +95,10 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
       </div>
 
       <div className="deal-card-section">
-        <label className="microlabel">Mensagem</label>
-        <select className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+        <label htmlFor={templateSelectId} className="microlabel">
+          Mensagem
+        </label>
+        <select id={templateSelectId} className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
           {MESSAGE_TEMPLATES.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -110,7 +119,12 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
           <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, companyName, logoUrl, deal.obraNumero || 1)}>
             PDF
           </button>
-          <button type="button" className="icon-action-btn danger" onClick={() => onDelete(deal.id!)}>
+          <button
+            type="button"
+            className="icon-action-btn danger"
+            onClick={() => onDelete(deal.id!)}
+            aria-label={`Excluir proposta de ${deal.clientName || "cliente sem nome"}`}
+          >
             Excluir
           </button>
         </div>
@@ -133,7 +147,7 @@ export function AlertsPanel({ deals }: { deals: Deal[] }) {
   if (pending.length === 0) return null;
 
   return (
-    <div className="panel" style={{ marginBottom: 16, borderColor: "var(--red-400)" }}>
+    <div className="panel" role="status" style={{ marginBottom: 16, borderColor: "var(--red-400)" }}>
       <h2 className="panel-title">Hoje você precisa falar com {pending.length} cliente(s)</h2>
       {pending.map((d) => {
         const days = daysSince(d.sentAt);
@@ -158,16 +172,20 @@ export default function ProposalsBoard(props: Props) {
           const items = deals.filter((d) => d.stage === stage.id);
           const totalValue = items.reduce((s, d) => s + num(d.valorFinal), 0);
           return (
-            <div className="funil-col" key={stage.id}>
-              <p className="eyebrow">{stage.label}</p>
-              <p className="microlabel">
-                {items.length} proposta(s) — {formatBRL(totalValue)}
-              </p>
-              {items.map((deal) => (
-                <DealCard key={deal.id} deal={deal} {...props} />
-              ))}
-              {items.length === 0 && <p className="microlabel">Nenhuma proposta.</p>}
-            </div>
+            <section className="funil-col" key={stage.id} aria-label={`Coluna ${stage.label}`}>
+              <div className="funil-col-head">
+                <span>
+                  {stage.label} — {formatBRL(totalValue)}
+                </span>
+                <span className="funil-count">{items.length}</span>
+              </div>
+              <div className="funil-col-body">
+                {items.map((deal) => (
+                  <DealCard key={deal.id} deal={deal} {...props} />
+                ))}
+                {items.length === 0 && <p className="microlabel">Nenhuma proposta.</p>}
+              </div>
+            </section>
           );
         })}
       </div>

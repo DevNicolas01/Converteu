@@ -36,8 +36,9 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
           </>
         )}
         <div className="field">
-          <label>E-mail</label>
+          <label htmlFor="login-email">E-mail</label>
           <input
+            id="login-email"
             className="input"
             type="email"
             autoComplete="username"
@@ -47,8 +48,9 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
           />
         </div>
         <div className="field">
-          <label>Senha</label>
+          <label htmlFor="login-password">Senha</label>
           <input
+            id="login-password"
             className="input"
             type="password"
             autoComplete="current-password"
@@ -60,7 +62,9 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
           Entrar
         </button>
-        <p className="save-msg">{error}</p>
+        <p className="save-msg" role="alert" aria-live="assertive">
+          {error}
+        </p>
       </form>
     </div>
   );

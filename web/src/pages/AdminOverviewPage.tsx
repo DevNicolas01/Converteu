@@ -218,6 +218,9 @@ export default function AdminOverviewPage() {
 
   return (
     <div id="app">
+      <a href="#main-content" className="skip-link">
+        Pular para o conteúdo
+      </a>
       <header className="topbar">
         <div className="brand-area">
           <div className="logo-container">
@@ -238,7 +241,7 @@ export default function AdminOverviewPage() {
         </div>
       </header>
 
-      <main className="main">
+      <main className="main" id="main-content">
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, margin: 16, marginBottom: 0 }}>
           <div className="metric-card">
             <p className="metric-label">Contas</p>
@@ -280,16 +283,17 @@ export default function AdminOverviewPage() {
           </p>
           <form onSubmit={handleCreate} className="field-grid">
             <div className="field">
-              <label>Nome da empresa</label>
-              <input className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+              <label htmlFor="new-company-name">Nome da empresa</label>
+              <input id="new-company-name" className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </div>
             <div className="field">
-              <label>E-mail</label>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <label htmlFor="new-company-email">E-mail</label>
+              <input id="new-company-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="field">
-              <label>Meses de assinatura</label>
+              <label htmlFor="new-company-months">Meses de assinatura</label>
               <input
+                id="new-company-months"
                 className="input"
                 type="number"
                 min={1}
@@ -301,7 +305,9 @@ export default function AdminOverviewPage() {
           <button className="save-btn" style={{ marginTop: 8 }} onClick={handleCreate} disabled={creating}>
             Criar conta
           </button>
-          <p className={`save-msg${createError ? " is-error" : ""}`}>{createMsg}</p>
+          <p className={`save-msg${createError ? " is-error" : ""}`} role="status" aria-live="polite">
+            {createMsg}
+          </p>
         </section>
 
         <section className="panel" style={{ margin: 16, marginBottom: 0 }}>
@@ -311,20 +317,22 @@ export default function AdminOverviewPage() {
           </p>
           <form onSubmit={handleAddAdmin} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
-              <label>E-mail do novo admin</label>
-              <input className="input" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
+              <label htmlFor="new-admin-email">E-mail do novo admin</label>
+              <input id="new-admin-email" className="input" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
             </div>
             <button className="save-btn" type="submit" disabled={addingAdmin}>
               Adicionar admin
             </button>
           </form>
-          <p className={`save-msg${adminMsgError ? " is-error" : ""}`}>{adminMsg}</p>
+          <p className={`save-msg${adminMsgError ? " is-error" : ""}`} role="status" aria-live="polite">
+            {adminMsg}
+          </p>
           {admins.length > 0 && (
             <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none" }}>
               {admins.map((a) => (
                 <li key={a.uid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--n-800)" }}>
                   <span>{a.email || a.uid}</span>
-                  <button className="link-btn" onClick={() => handleRemoveAdmin(a.uid)}>
+                  <button className="link-btn" onClick={() => handleRemoveAdmin(a.uid)} aria-label={`Remover admin ${a.email || a.uid}`}>
                     remover
                   </button>
                 </li>
@@ -336,7 +344,11 @@ export default function AdminOverviewPage() {
         <section className="panel" style={{ margin: 16 }}>
           <h2 className="panel-title">Clientes</h2>
           <div className="field" style={{ maxWidth: 320 }}>
+            <label htmlFor="account-search" className="microlabel">
+              Buscar cliente
+            </label>
             <input
+              id="account-search"
               className="input"
               placeholder="Buscar por empresa ou e-mail..."
               value={search}

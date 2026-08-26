@@ -49,15 +49,16 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
         Nome e logo aparecem no PDF de todos os orçamentos.
       </p>
       <div className="field">
-        <label>Nome da empresa (obrigatório)</label>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Arrow Shot" required />
+        <label htmlFor="company-name">Nome da empresa (obrigatório)</label>
+        <input id="company-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Arrow Shot" required />
       </div>
       <div className="field">
-        <label>Logo da empresa (opcional)</label>
+        <span id="company-logo-label">Logo da empresa (opcional)</span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            aria-label="Escolher ou trocar a logo da empresa"
             style={{
               width: 64,
               height: 64,
@@ -74,9 +75,11 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
             title="Escolher logo"
           >
             {previewUrl ? (
-              <img src={previewUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={previewUrl} alt="Prévia da logo atual" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <span className="microlabel">Logo</span>
+              <span className="microlabel" aria-hidden="true">
+                Logo
+              </span>
             )}
           </button>
           <div>
@@ -87,6 +90,7 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              aria-labelledby="company-logo-label"
               style={{ display: "none" }}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
@@ -103,7 +107,9 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
           </button>
         )}
       </div>
-      <p className={`save-msg${msg.startsWith("Não") ? " is-error" : ""}`}>{msg}</p>
+      <p className={`save-msg${msg.startsWith("Não") ? " is-error" : ""}`} role="status" aria-live="polite">
+        {msg}
+      </p>
     </form>
   );
 

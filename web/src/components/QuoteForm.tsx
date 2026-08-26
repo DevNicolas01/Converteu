@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { cloneElement, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   emptyDeal,
   calcDeal,
@@ -26,11 +26,12 @@ interface Props {
   onCancelEdit?: () => void;
 }
 
-function field(label: string, input: React.ReactNode, key: string) {
+function field(label: string, input: ReactElement<{ id?: string }>, key: string) {
+  const id = `qf-${key}`;
   return (
     <div className="field" key={key}>
-      <label>{label}</label>
-      {input}
+      <label htmlFor={id}>{label}</label>
+      {cloneElement(input, { id })}
     </div>
   );
 }
@@ -218,11 +219,13 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
         <div className="role-grid">
           {ROLES.map((r) => (
             <div className="role-card" key={r.key}>
-              <p>{r.label}</p>
+              <p id={`role-label-${r.key}`}>{r.label}</p>
               <input
                 className="input"
                 type="number"
                 placeholder="Qtd."
+                aria-label={`Quantidade de ${r.label}`}
+                aria-describedby={`role-label-${r.key}`}
                 value={deal.qtd[r.key]}
                 onChange={(e) => setRole("qtd", r.key, e.target.value)}
               />
@@ -230,6 +233,8 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
                 className="input"
                 type="number"
                 placeholder="Diária (R$)"
+                aria-label={`Diária em reais de ${r.label}`}
+                aria-describedby={`role-label-${r.key}`}
                 value={deal.diaria[r.key]}
                 onChange={(e) => setRole("diaria", r.key, e.target.value)}
               />
@@ -269,6 +274,7 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
                 <input
                   className="input"
                   placeholder="Ex: detergente"
+                  aria-label={`Nome do produto ${i + 1}`}
                   value={p.nome}
                   onChange={(e) => setProduto(i, { nome: e.target.value })}
                 />
@@ -276,17 +282,24 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
                   className="input"
                   type="number"
                   min={0}
+                  aria-label={`Quantidade do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
                   value={p.quantidade}
                   onChange={(e) => setProduto(i, { quantidade: e.target.value })}
                 />
                 <input
                   className="input"
                   type="number"
+                  aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
                   value={p.valorUnitario}
                   onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
                 />
                 <span className="produtos-subtotal">{formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}</span>
-                <button type="button" className="icon-action-btn danger" onClick={() => removeProduto(i)}>
+                <button
+                  type="button"
+                  className="icon-action-btn danger"
+                  onClick={() => removeProduto(i)}
+                  aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                >
                   remover
                 </button>
               </div>
@@ -339,7 +352,9 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
             </button>
           )}
         </div>
-        <p className={`save-msg${saveError ? " is-error" : ""}`}>{saveMsg}</p>
+        <p className={`save-msg${saveError ? " is-error" : ""}`} role="status" aria-live="polite">
+          {saveMsg}
+        </p>
       </div>
 
       <div className="panel">

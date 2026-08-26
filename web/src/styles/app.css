@@ -7,6 +7,25 @@
   color-scheme: light;
 }
 
+/* Só aparece quando alguém navega por teclado (Tab) e chega nele — pra quem usa mouse/
+   dedo, fica fora da tela sem atrapalhar nada. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 5000;
+  background: var(--amber-400);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
 }
@@ -318,19 +337,6 @@
   font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
-}
-
-.deal-card-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.deal-card-value {
-  font-weight: 700;
-  color: var(--amber-400);
-  font-size: 15px;
 }
 
 .stage-pills {
