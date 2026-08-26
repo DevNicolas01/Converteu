@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin — Converteu</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #accounts-table table { width: 100%; border-collapse: collapse; }
+    #accounts-table th, #accounts-table td {
+      text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--n-800); font-size: 13px;
+    }
+    .admin-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  </style>
+</head>
+
+<body>
+
+  <div id="screen-login" class="auth-screen">
+    <form class="panel auth-panel" id="login-form">
+      <h2 class="panel-title">Entrar como admin</h2>
+      <div class="field">
+        <label>E-mail</label>
+        <input class="input" type="email" id="login-email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input class="input" type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button class="save-btn" type="submit" id="login-submit" style="width:100%;">Entrar</button>
+      <p class="save-msg" id="login-error"></p>
+    </form>
+  </div>
+
+  <div id="screen-forbidden" class="auth-screen hidden">
+    <div class="panel auth-panel">
+      <h2 class="panel-title">Acesso restrito</h2>
+      <p class="panel-help">Esta conta não tem permissão de admin.</p>
+      <button class="save-btn" id="forbidden-logout-btn" style="width:100%;">Sair</button>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+
+    <header class="topbar">
+      <div class="brand-area">
+        <div class="brand-info">
+          <h1 class="brand">Painel <span>Admin</span></h1>
+          <p class="subtitle">Contas e relatórios — Converteu</p>
+        </div>
+      </div>
+      <button class="theme-toggle" id="logout-btn" title="Sair" aria-label="Sair">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </header>
+
+    <main class="main">
+      <section class="panel" style="margin-bottom:16px;">
+        <h2 class="panel-title">Criar nova conta</h2>
+        <div class="admin-form-grid">
+          <div class="field">
+            <label>Nome da empresa</label>
+            <input class="input" id="new-company-name">
+          </div>
+          <div class="field">
+            <label>E-mail</label>
+            <input class="input" type="email" id="new-company-email">
+          </div>
+          <div class="field">
+            <label>Senha inicial</label>
+            <input class="input" type="password" id="new-company-password">
+          </div>
+          <div class="field">
+            <label>Meses de assinatura</label>
+            <input class="input" type="number" id="new-company-months" value="1" min="1">
+          </div>
+        </div>
+        <button class="save-btn" id="btn-create-account" style="margin-top:8px;">Criar conta</button>
+        <p class="save-msg" id="create-account-msg"></p>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Clientes</h2>
+        <div id="accounts-table">Carregando...</div>
+      </section>
+    </main>
+
+  </div>
+
+  <script type="module" src="firebase-client.js"></script>
+  <script type="module" src="admin-client.js"></script>
+  <script src="admin.js" defer></script>
+
+</body>
+
+</html>

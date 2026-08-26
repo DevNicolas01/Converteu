@@ -18,16 +18,11 @@ const ROLES = [
 
 const LEAD_SOURCES = ["Google", "Indicação", "Recorrente", "Outro"];
 
-const STORAGE_KEY = "deals-v2";
-
 const PIE_COLORS = ["#1D4ED8", "#0EA5E9", "#64748B", "#F59E0B", "#94A3B8"];
 
 const LOGO_BASE64 = "data:image/png;base64,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";
 
-const COMPANY_STORAGE_KEY = "orcei-company";
-
 const MAX_LOGO_DIMENSION = 320;
-const MAX_LOGO_BASE64_LENGTH = 350000;
 
 function emptyDeal() {
   return {
@@ -217,47 +212,43 @@ const state = {
   form: emptyDeal(),
   saveMsg: "",
   company: null,
-  companyForm: { name: "", logoBase64: "" },
+  companyForm: { name: "", logoUrl: "" },
   companyMsg: "",
 };
 
-function loadDeals() {
+async function loadDeals() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    state.deals = raw ? JSON.parse(raw) : [];
+    state.deals = await window.OrceiDB.listProposals();
   } catch (e) {
+    console.error("Falha ao carregar propostas", e);
     state.deals = [];
-  }
-}
-
-function persist(nextDeals) {
-  state.deals = nextDeals;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextDeals));
-  } catch (e) {
-    console.error("Falha ao salvar", e);
   }
 }
 
 /* ================= ACTIONS ================= */
 
-function saveDeal() {
+async function saveDeal() {
   if (!state.form.clientName || !state.form.metragem) return;
   const computed = calcDeal(state.form);
   const record = Object.assign({}, state.form, computed);
-
-  let next;
-  if (state.form.id) {
-    next = state.deals.map((d) => (d.id === state.form.id ? record : d));
-  } else {
-    record.id = Date.now().toString();
-    record.obraNumero = state.deals.length + 1;
-    record.stage = record.stage || "contato_inicial";
-    next = state.deals.concat([record]);
-  }
   const wasEditing = !!state.form.id;
-  persist(next);
-  state.saveMsg = wasEditing ? "Proposta atualizada." : "Proposta criada e enviada ao funil.";
+
+  try {
+    if (wasEditing) {
+      await window.OrceiDB.updateProposal(record.id, record);
+      state.deals = state.deals.map((d) => (d.id === record.id ? record : d));
+    } else {
+      record.obraNumero = state.deals.length + 1;
+      record.stage = record.stage || "contato_inicial";
+      record.id = await window.OrceiDB.createProposal(record);
+      state.deals = state.deals.concat([record]);
+    }
+    state.saveMsg = wasEditing ? "Proposta atualizada." : "Proposta criada e enviada ao funil.";
+  } catch (e) {
+    console.error("Falha ao salvar proposta", e);
+    state.saveMsg = "Não foi possível salvar. Tente novamente.";
+  }
+
   state.form = emptyDeal();
   renderCalcTab();
   setTimeout(() => {
@@ -272,19 +263,87 @@ function editDeal(deal) {
   setTab("calc");
 }
 
-function deleteDeal(id) {
-  persist(state.deals.filter((d) => d.id !== id));
+async function deleteDeal(id) {
+  try {
+    await window.OrceiDB.deleteProposal(id);
+    state.deals = state.deals.filter((d) => d.id !== id);
+  } catch (e) {
+    console.error("Falha ao excluir proposta", e);
+  }
   renderFunilTab();
 }
 
-function moveStage(id, stage) {
-  state.deals = state.deals.map((d) => {
-    if (d.id !== id) return d;
-    const closedAt = stage === "fechado" ? new Date().toISOString() : d.closedAt;
-    return Object.assign({}, d, { stage, closedAt });
-  });
-  persist(state.deals);
+async function moveStage(id, stage) {
+  const deal = state.deals.find((d) => d.id === id);
+  if (!deal) return;
+  const closedAt = stage === "fechado" ? new Date().toISOString() : deal.closedAt;
+  const updated = Object.assign({}, deal, { stage, closedAt });
+  try {
+    await window.OrceiDB.updateProposal(id, updated);
+    state.deals = state.deals.map((d) => (d.id === id ? updated : d));
+  } catch (e) {
+    console.error("Falha ao mover estágio", e);
+  }
   renderFunilTab();
+}
+
+async function sendDealByEmail(deal) {
+  const destinatario = prompt("E-mail do cliente para enviar a proposta:");
+  if (!destinatario) return;
+  try {
+    const { blob, fileName } = await getProposalPdfBlob(deal);
+    await window.OrceiDB.sendProposalEmail({
+      proposalId: deal.id,
+      destinatario,
+      assunto: `Orçamento — ${deal.obraNome || "proposta"}`,
+      mensagem: "Segue em anexo o orçamento solicitado.",
+      pdfBlob: blob,
+      pdfFileName: fileName,
+    });
+    alert("Proposta enviada por e-mail!");
+  } catch (e) {
+    console.error("Falha ao enviar e-mail", e);
+    alert("Não foi possível enviar o e-mail. Tente novamente.");
+  }
+}
+
+function shareDealOnWhatsApp(deal) {
+  const numero = prompt("Número de WhatsApp do cliente (com DDD):");
+  if (!numero) return;
+  const mensagem = `Olá! Segue o resumo do orçamento — Obra ${deal.obraNumero || ""}: ${formatBRL(deal.valorFinal)}.`;
+  const link = window.OrceiDB.buildWhatsAppShareLink(numero, mensagem);
+  window.open(link, "_blank");
+}
+
+async function scheduleDealOnCalendar(deal) {
+  const startInput = prompt("Data e hora do evento (AAAA-MM-DDTHH:MM):", "");
+  if (!startInput) return;
+  const start = new Date(startInput);
+  if (isNaN(start.getTime())) {
+    alert("Data/hora inválida.");
+    return;
+  }
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+  try {
+    await window.OrceiDB.createCalendarEvent({
+      proposalId: deal.id,
+      title: `Proposta — ${deal.obraNome || deal.clientName || "cliente"}`,
+      description: `Valor: ${formatBRL(deal.valorFinal)}`,
+      startDateTime: start.toISOString(),
+      endDateTime: end.toISOString(),
+    });
+    alert("Evento criado no Google Calendar!");
+  } catch (e) {
+    if (e && e.code === "functions/failed-precondition") {
+      if (confirm("Você ainda não conectou o Google Calendar. Conectar agora?")) {
+        window.OrceiDB.connectGoogleCalendar(window.OrceiDB.getGoogleOAuthStartUrl());
+      }
+      return;
+    }
+    console.error("Falha ao criar evento no Google Calendar", e);
+    alert("Não foi possível criar o evento. Tente novamente.");
+  }
 }
 
 function setTab(tab) {
@@ -298,7 +357,6 @@ function setTab(tab) {
   if (tab === "calc") renderCalcTab();
   if (tab === "funil") renderFunilTab();
   if (tab === "painel") renderPainelTab();
-  if (tab === "empresa") renderEmpresaTab();
 }
 
 /* ================= RENDER: CALC TAB ================= */
@@ -633,6 +691,11 @@ function renderFunilTab() {
                     <select class="deal-stage-select" data-stage-select>
                       ${STAGES.map((s) => `<option value="${esc(s.id)}" ${d.stage === s.id ? "selected" : ""}>${esc(s.label)}</option>`).join("")}
                     </select>
+                    <div class="deal-card-actions" style="display:flex;gap:10px;margin-top:8px;">
+                      <button class="link-btn" data-send-email title="Enviar por e-mail">E-mail</button>
+                      <button class="link-btn" data-share-whatsapp title="Compartilhar no WhatsApp">WhatsApp</button>
+                      <button class="link-btn" data-schedule-calendar title="Agendar no Google Calendar">Agenda</button>
+                    </div>
                   </div>
                 `).join("")}
               </div>
@@ -651,6 +714,9 @@ function renderFunilTab() {
     card.querySelector("[data-edit]").addEventListener("click", () => editDeal(deal));
     card.querySelector("[data-delete]").addEventListener("click", () => deleteDeal(id));
     card.querySelector("[data-stage-select]").addEventListener("change", (e) => moveStage(id, e.target.value));
+    card.querySelector("[data-send-email]").addEventListener("click", () => sendDealByEmail(deal));
+    card.querySelector("[data-share-whatsapp]").addEventListener("click", () => shareDealOnWhatsApp(deal));
+    card.querySelector("[data-schedule-calendar]").addEventListener("click", () => scheduleDealOnCalendar(deal));
   });
 }
 
@@ -790,51 +856,46 @@ function renderPieChart(container, data) {
 
 /* ================= EMPRESA ================= */
 
-function loadCompanyProfile() {
+async function loadCompanyProfile() {
   try {
-    const raw = localStorage.getItem(COMPANY_STORAGE_KEY);
-    state.company = raw ? JSON.parse(raw) : null;
+    state.company = await window.OrceiDB.getCompanyProfile();
   } catch (e) {
-    state.company = null;
+    console.error("Falha ao carregar dados da empresa", e);
+    state.company = { companyName: "", logoUrl: null };
   }
   state.companyForm = {
-    name: (state.company && state.company.name) || "",
-    logoBase64: (state.company && state.company.logoBase64) || "",
+    name: (state.company && state.company.companyName) || "",
+    logoUrl: (state.company && state.company.logoUrl) || "",
   };
 }
 
-function saveCompanyProfile() {
+/** Salva nome + retorna true se deu certo (usado pelo submit da tela de setup). */
+async function saveCompanyProfile() {
   const name = state.companyForm.name.trim();
   if (!name) {
     state.companyMsg = "O nome da empresa é obrigatório.";
-    renderEmpresaTab();
-    return;
+    renderCompanySetupScreen();
+    return false;
   }
 
-  const data = { name, logoBase64: state.companyForm.logoBase64 || "" };
   try {
-    localStorage.setItem(COMPANY_STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    state.companyMsg = "Não foi possível salvar. Tente novamente.";
-    renderEmpresaTab();
-    return;
-  }
-
-  state.company = data;
-  state.companyMsg = "Dados da empresa salvos.";
-  renderEmpresaTab();
-  setTimeout(() => {
+    await window.OrceiDB.saveCompanyProfile({ companyName: name });
+    state.company = Object.assign({}, state.company, { companyName: name });
     state.companyMsg = "";
-    const el = document.getElementById("company-msg");
-    if (el) el.textContent = "";
-  }, 2500);
+    return true;
+  } catch (e) {
+    console.error("Falha ao salvar dados da empresa", e);
+    state.companyMsg = "Não foi possível salvar. Tente novamente.";
+    renderCompanySetupScreen();
+    return false;
+  }
 }
 
-function handleLogoFile(file) {
+function handleCompanyLogoFile(file) {
   if (!file) return;
   if (!file.type.startsWith("image/")) {
     state.companyMsg = "Escolha um arquivo de imagem.";
-    renderEmpresaTab();
+    renderCompanySetupScreen();
     return;
   }
 
@@ -851,89 +912,86 @@ function handleLogoFile(file) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, w, h);
 
-      let dataUrl = canvas.toDataURL("image/png");
-      if (dataUrl.length > MAX_LOGO_BASE64_LENGTH) {
-        dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-      }
-
-      if (dataUrl.length > MAX_LOGO_BASE64_LENGTH) {
-        state.companyMsg = "Essa imagem é muito grande. Tente uma logo mais simples ou menor.";
-        renderEmpresaTab();
-        return;
-      }
-
-      state.companyForm.logoBase64 = dataUrl;
-      state.companyMsg = "";
-      renderEmpresaTab();
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          state.companyMsg = "Não foi possível processar essa imagem.";
+          renderCompanySetupScreen();
+          return;
+        }
+        state.companyMsg = "Enviando logo...";
+        renderCompanySetupScreen();
+        try {
+          const logoFile = new File([blob], "logo.png", { type: "image/png" });
+          const logoUrl = await window.OrceiDB.uploadCompanyLogo(logoFile);
+          state.companyForm.logoUrl = logoUrl;
+          state.company = Object.assign({}, state.company, { logoUrl });
+          state.companyMsg = "Logo enviada.";
+        } catch (err) {
+          console.error("Falha ao enviar logo", err);
+          state.companyMsg = "Não foi possível enviar a logo. Tente novamente.";
+        }
+        renderCompanySetupScreen();
+      }, "image/png");
     };
     img.onerror = () => {
       state.companyMsg = "Não foi possível ler essa imagem.";
-      renderEmpresaTab();
+      renderCompanySetupScreen();
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function removeCompanyLogo() {
-  state.companyForm.logoBase64 = "";
-  renderEmpresaTab();
+async function removeCompanyLogo() {
+  state.companyForm.logoUrl = "";
+  try {
+    await window.OrceiDB.clearCompanyLogo();
+    state.company = Object.assign({}, state.company, { logoUrl: null });
+  } catch (e) {
+    console.error("Falha ao remover logo", e);
+  }
+  renderCompanySetupScreen();
 }
 
-function renderEmpresaTab() {
-  const container = document.getElementById("tab-empresa");
-  if (!container) return;
+/** Preenche a tela única de "dados da empresa" (roda uma vez, antes do app; reaberta pelo botão no topo). */
+function renderCompanySetupScreen() {
+  const nameInput = document.getElementById("company-setup-name");
+  if (!nameInput) return;
+  nameInput.value = state.companyForm.name;
 
-  const f = state.companyForm;
-
-  container.innerHTML = `
-    <div class="panel" style="max-width:420px;">
-      <h2 class="panel-title">Dados da empresa</h2>
-      <p class="panel-help" style="margin-top:0;">Esses dados aparecem no PDF do orçamento, no lugar de "Arrow Shot".</p>
-
-      <div class="field">
-        <label>Nome da empresa (obrigatório)</label>
-        <input class="input" id="company-name" placeholder="Ex: Arrow Shot" value="${esc(f.name)}">
-      </div>
-
-      <div class="field">
-        <label>Logo da empresa (opcional)</label>
-        ${f.logoBase64 ? `
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-            <img src="${f.logoBase64}" alt="Logo" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--n-800);">
-            <button class="link-btn" id="btn-remove-logo">remover logo</button>
-          </div>
-        ` : `<p class="empty-note" style="margin-bottom:8px;">Nenhuma logo escolhida ainda.</p>`}
-        <input type="file" class="input" id="company-logo-file" accept="image/*">
-      </div>
-
-      <button class="save-btn" id="btn-save-company" style="margin-top:8px;">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-        Salvar dados da empresa
-      </button>
-      <p class="save-msg" id="company-msg">${esc(state.companyMsg)}</p>
+  const preview = document.getElementById("company-setup-logo-preview");
+  preview.innerHTML = state.companyForm.logoUrl ? `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+      <img src="${state.companyForm.logoUrl}" alt="Logo" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--n-800);">
+      <button class="link-btn" type="button" id="btn-remove-logo">remover logo</button>
     </div>
-  `;
+  ` : `<p class="empty-note" style="margin-bottom:8px;">Nenhuma logo escolhida ainda.</p>`;
 
-  document.getElementById("company-name").addEventListener("input", (e) => {
-    state.companyForm.name = e.target.value;
-  });
-  document.getElementById("company-logo-file").addEventListener("change", (e) => {
-    handleLogoFile(e.target.files[0]);
-  });
   const removeBtn = document.getElementById("btn-remove-logo");
   if (removeBtn) removeBtn.addEventListener("click", removeCompanyLogo);
-  document.getElementById("btn-save-company").addEventListener("click", saveCompanyProfile);
+
+  const msgEl = document.getElementById("company-setup-msg");
+  if (msgEl) msgEl.textContent = state.companyMsg;
+}
+
+function attachCompanySetupForm() {
+  document.getElementById("company-setup-name").addEventListener("input", (e) => {
+    state.companyForm.name = e.target.value;
+  });
+  document.getElementById("company-setup-logo-file").addEventListener("change", (e) => {
+    handleCompanyLogoFile(e.target.files[0]);
+  });
 }
 
 /* ================= PDF ================= */
 
-function getImageDimensions(dataUrl) {
+function getImageDimensions(src) {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => resolve({ width: img.width, height: img.height });
+    if (!src.startsWith("data:")) img.crossOrigin = "anonymous";
+    img.onload = () => resolve({ width: img.width, height: img.height, img });
     img.onerror = () => resolve(null);
-    img.src = dataUrl;
+    img.src = src;
   });
 }
 
@@ -942,21 +1000,28 @@ function fitBox(natW, natH, maxW, maxH) {
   return { w: natW * scale, h: natH * scale };
 }
 
+function buildProposalPdf(deal) {
+  const hasLogo = !!(state.company && state.company.logoUrl);
+  const companyName = (state.company && state.company.companyName) || "Sua empresa";
+  const logoSrc = hasLogo ? state.company.logoUrl : LOGO_BASE64;
+
+  return getImageDimensions(logoSrc).then((imgInfo) => buildProposalDoc(deal, companyName, imgInfo));
+}
+
 function downloadPdf(deal) {
   if (typeof window.jspdf === "undefined") {
     alert("Não foi possível gerar o PDF agora. Verifique sua conexão com a internet e tente novamente.");
     return;
   }
-
-  const hasCompanyProfile = !!state.company;
-  const companyName = hasCompanyProfile ? (state.company.name || "Sua empresa") : "Arrow Shot";
-  const logoSrc = hasCompanyProfile ? (state.company.logoBase64 || null) : LOGO_BASE64;
-
-  const dimsPromise = logoSrc ? getImageDimensions(logoSrc) : Promise.resolve(null);
-  dimsPromise.then((dims) => buildAndSavePdf(deal, companyName, logoSrc, dims));
+  buildProposalPdf(deal).then(({ doc, fileName }) => doc.save(fileName));
 }
 
-function buildAndSavePdf(deal, companyName, logoSrc, logoDims) {
+async function getProposalPdfBlob(deal) {
+  const { doc, fileName } = await buildProposalPdf(deal);
+  return { blob: doc.output("blob"), fileName };
+}
+
+function buildProposalDoc(deal, companyName, imgInfo) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const calc = calcDeal(deal);
@@ -965,9 +1030,9 @@ function buildAndSavePdf(deal, companyName, logoSrc, logoDims) {
   let y = 20;
 
   let textX = marginX;
-  if (logoSrc && logoDims) {
-    const box = fitBox(logoDims.width, logoDims.height, 18, 15);
-    doc.addImage(logoSrc, marginX, 9 + (15 - box.h) / 2, box.w, box.h);
+  if (imgInfo) {
+    const box = fitBox(imgInfo.width, imgInfo.height, 18, 15);
+    doc.addImage(imgInfo.img, marginX, 9 + (15 - box.h) / 2, box.w, box.h);
     textX = marginX + box.w + 6;
   }
 
@@ -1057,7 +1122,7 @@ function buildAndSavePdf(deal, companyName, logoSrc, logoDims) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  doc.save(`orcamento-obra-${numeroObra}-${nomeArquivo || "cliente"}.pdf`);
+  return { doc, fileName: `orcamento-obra-${numeroObra}-${nomeArquivo || "cliente"}.pdf` };
 }
 
 /* ================= INIT ================= */
@@ -1090,16 +1155,111 @@ function initTheme() {
   }
 }
 
-function init() {
-  initTheme();
-  loadCompanyProfile();
-  loadDeals();
+function showScreen(name) {
+  document.getElementById("screen-login").classList.toggle("hidden", name !== "login");
+  document.getElementById("screen-blocked").classList.toggle("hidden", name !== "blocked");
+  document.getElementById("screen-company-setup").classList.toggle("hidden", name !== "company-setup");
+  document.getElementById("app").classList.toggle("hidden", name !== "app");
+}
 
+function attachLoginForm() {
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById("login-error");
+    errEl.textContent = "";
+    const email = document.getElementById("login-email").value.trim();
+    const senha = document.getElementById("login-password").value;
+    const btn = document.getElementById("login-submit");
+    btn.disabled = true;
+    try {
+      await window.OrceiDB.login(email, senha);
+    } catch (err) {
+      errEl.textContent = "E-mail ou senha inválidos.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+let tabsBound = false;
+
+function bindTabsOnce() {
+  if (tabsBound) return;
+  tabsBound = true;
   document.querySelectorAll(".tabbtn").forEach((btn) => {
     btn.addEventListener("click", () => setTab(btn.dataset.tab));
   });
-
-  renderCalcTab();
+  document.getElementById("logout-btn").addEventListener("click", () => window.OrceiDB.logout());
+  document.getElementById("edit-company-btn").addEventListener("click", () => {
+    renderCompanySetupScreen();
+    showScreen("company-setup");
+  });
 }
 
-document.addEventListener("DOMContentLoaded", init);
+async function enterApp() {
+  await loadDeals();
+  bindTabsOnce();
+  renderCalcTab();
+  showScreen("app");
+}
+
+function boot() {
+  initTheme();
+  attachLoginForm();
+  attachCompanySetupForm();
+  document.getElementById("blocked-logout-btn").addEventListener("click", () => window.OrceiDB.logout());
+
+  document.getElementById("company-setup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const ok = await saveCompanyProfile();
+    renderCompanySetupScreen();
+    if (!ok) return;
+    if (tabsBound) {
+      showScreen("app");
+    } else {
+      await enterApp();
+    }
+  });
+
+  window.OrceiDB.onAuthStateChange(async (user) => {
+    if (!user) {
+      showScreen("login");
+      return;
+    }
+
+    let status;
+    try {
+      status = await window.OrceiDB.getAccountStatus();
+    } catch (err) {
+      console.error("Falha ao ler status da conta", err);
+      showScreen("login");
+      return;
+    }
+
+    if (!status.isActiveAndValid) {
+      document.getElementById("blocked-message").textContent = status.isSuspended
+        ? "Sua conta está suspensa. Fale com o suporte para reativar."
+        : "Sua assinatura venceu. Fale com o suporte para renovar.";
+      showScreen("blocked");
+      return;
+    }
+
+    try {
+      await window.OrceiDB.migrateFromLocalStorage();
+    } catch (err) {
+      console.error("Falha na migração dos dados antigos", err);
+    }
+
+    await loadCompanyProfile();
+
+    if (!state.companyForm.name) {
+      renderCompanySetupScreen();
+      showScreen("company-setup");
+      return;
+    }
+
+    await enterApp();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", boot);

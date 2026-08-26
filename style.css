@@ -189,6 +189,19 @@ input, select {
   padding: 20px;
 }
 
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-panel {
+  width: 100%;
+  max-width: 380px;
+}
+
 @media (max-width: 640px) {
   .panel { padding: 16px; border-radius: 10px; }
 }

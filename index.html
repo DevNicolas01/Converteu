@@ -8,7 +8,7 @@
 
   <link rel="icon" type="image/x-icon" href="fav.ico">
 
-  <title>OrçaFacul — Arrow Shot</title>
+  <title>Converteu — Arrow Shot</title>
 
   <link rel="stylesheet" href="style.css">
 
@@ -25,11 +25,36 @@
 
 <body>
 
-  <div id="app">
+  <div id="screen-login" class="auth-screen">
+    <form class="panel auth-panel" id="login-form">
+      <h2 class="panel-title">Entrar</h2>
+      <p class="panel-help" style="margin-top:0;">Acesso por conta — fale com o suporte se ainda não tem um login.</p>
+      <p class="panel-help" style="margin-top:0;"> +55 (61) 99861-5779 <-> @marketingparalimpeza </p>
+      <div class="field">
+        <label>E-mail</label>
+        <input class="input" type="email" id="login-email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input class="input" type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button class="save-btn" type="submit" id="login-submit" style="width:100%;">Entrar</button>
+      <p class="save-msg" id="login-error"></p>
+    </form>
+  </div>
+
+  <div id="screen-blocked" class="auth-screen hidden">
+    <div class="panel auth-panel">
+      <h2 class="panel-title">Acesso bloqueado</h2>
+      <p id="blocked-message" class="panel-help"></p>
+      <button class="save-btn" id="blocked-logout-btn" style="width:100%;">Sair</button>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
 
     <header class="topbar">
 
-      <!-- Identidade da empresa -->
       <div class="brand-area">
 
         <div class="logo-container">
@@ -41,8 +66,8 @@
         </div>
 
         <div class="brand-info">
-          <h1 class="brand">Orça<span>Facil</span></h1>
-          <p class="subtitle">Orçamentos da Arrow Shot</p>
+          <h1 class="brand">Conv<span>erteu</span></h1>
+          <p class="subtitle">Orçamentos para você!</p>
         </div>
 
       </div>
@@ -100,21 +125,6 @@
         </button>
 
 
-        <button class="tabbtn" data-tab="empresa">
-
-          <svg class="icon" viewBox="0 0 24 24">
-            <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-            <line x1="9" y1="8" x2="9" y2="8"></line>
-            <line x1="15" y1="8" x2="15" y2="8"></line>
-            <line x1="9" y1="13" x2="9" y2="13"></line>
-            <line x1="15" y1="13" x2="15" y2="13"></line>
-            <line x1="9" y1="18" x2="15" y2="18"></line>
-          </svg>
-
-          Empresa
-
-        </button>
-
       </nav>
 
         <button class="theme-toggle" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">
@@ -131,6 +141,25 @@
           </svg>
           <svg class="icon icon-moon" viewBox="0 0 24 24">
             <path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"></path>
+          </svg>
+        </button>
+
+        <button class="theme-toggle" id="edit-company-btn" title="Dados da empresa" aria-label="Dados da empresa">
+          <svg class="icon" viewBox="0 0 24 24">
+            <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+            <line x1="9" y1="8" x2="9" y2="8"></line>
+            <line x1="15" y1="8" x2="15" y2="8"></line>
+            <line x1="9" y1="13" x2="9" y2="13"></line>
+            <line x1="15" y1="13" x2="15" y2="13"></line>
+            <line x1="9" y1="18" x2="15" y2="18"></line>
+          </svg>
+        </button>
+
+        <button class="theme-toggle" id="logout-btn" title="Sair" aria-label="Sair">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
         </button>
 
@@ -162,23 +191,36 @@
         class="tab-panel hidden">
       </section>
 
-
-      <!-- Empresa -->
-      <section
-        id="tab-empresa"
-        class="tab-panel hidden">
-      </section>
-
     </main>
 
   </div>
 
+  <div id="screen-company-setup" class="auth-screen hidden">
+    <form class="panel auth-panel" id="company-setup-form">
+      <h2 class="panel-title">Dados da empresa</h2>
+      <p class="panel-help" style="margin-top:0;">Nome e logo aparecem no PDF de todos os orçamentos.</p>
+      <div class="field">
+        <label>Nome da empresa (obrigatório)</label>
+        <input class="input" id="company-setup-name" placeholder="Ex: Arrow Shot" required>
+      </div>
+      <div class="field">
+        <label>Logo da empresa (opcional)</label>
+        <div id="company-setup-logo-preview"></div>
+        <input type="file" class="input" id="company-setup-logo-file" accept="image/*">
+      </div>
+      <button class="save-btn" type="submit" id="company-setup-submit" style="width:100%;">Salvar e continuar</button>
+      <p class="save-msg" id="company-setup-msg"></p>
+    </form>
+  </div>
 
   <!-- Geração de PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <!-- Firebase -->
+  <script type="module" src="firebase-client.js"></script>
+
   <!-- JavaScript -->
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 
 </body>
 

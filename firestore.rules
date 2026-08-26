@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function ownsAccount(accountId) {
+      return isSignedIn() && request.auth.token.accountId == accountId;
+    }
+
+    function hasActiveSubscription(accountId) {
+      let acc = get(/databases/$(database)/documents/accounts/$(accountId)).data;
+      return acc.status == "active" && acc.subscriptionExpiresAt > request.time;
+    }
+
+    match /accounts/{accountId} {
+      allow read: if isAdmin() || ownsAccount(accountId);
+      allow create: if isAdmin();
+      allow update: if isAdmin() ||
+        (ownsAccount(accountId) &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(["subscriptionExpiresAt", "status", "ownerUid", "email"]));
+      allow delete: if isAdmin();
+
+      match /companyProfile/{docId} {
+        allow read: if isAdmin() || ownsAccount(accountId);
+        allow write: if isAdmin() || ownsAccount(accountId);
+      }
+
+      match /proposals/{proposalId} {
+        allow read: if isAdmin() || ownsAccount(accountId);
+        allow create: if isAdmin() || (ownsAccount(accountId) && hasActiveSubscription(accountId));
+        allow update, delete: if isAdmin() || ownsAccount(accountId);
+      }
+
+      match /emailLogs/{logId} {
+        allow read: if isAdmin() || ownsAccount(accountId);
+        allow write: if isAdmin();
+      }
+    }
+
+    match /admins/{uid} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /googleTokens/{accountId} {
+      allow read, write: if false;
+    }
+
+    match /_meta/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

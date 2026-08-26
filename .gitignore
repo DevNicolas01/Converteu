@@ -1,0 +1,7 @@
+node_modules/
+functions/lib/
+service-account.json
+firebase-config.js
+.firebase/
+*.log
+firestore-debug.log
