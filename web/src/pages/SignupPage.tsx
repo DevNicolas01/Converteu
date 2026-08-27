@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch("/api/plans")
@@ -39,9 +40,11 @@ export default function SignupPage() {
     }
     setError("");
     setSubmitting(true);
+
+    let uid: string;
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const uid = cred.user.uid;
+      uid = cred.user.uid;
       await setDoc(doc(db, "accounts", uid), {
         companyName: companyName.trim(),
         email: email.trim(),
@@ -49,7 +52,21 @@ export default function SignupPage() {
         status: "pending_payment",
         createdAt: Timestamp.now(),
       });
+    } catch (err) {
+      console.error("Falha ao criar a conta", err);
+      const code = (err as { code?: string }).code;
+      if (code === "auth/email-already-in-use") {
+        setError("Já existe uma conta com esse e-mail. Faça login.");
+      } else {
+        setError("Não foi possível criar a conta. Tente novamente.");
+      }
+      setSubmitting(false);
+      return;
+    }
 
+    // A conta já existe nesse ponto (login + doc criados). Se o pagamento falhar aqui,
+    // não é mais um erro de cadastro — manda pro app, que mostra a tela de "Assinar agora".
+    try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,14 +82,8 @@ export default function SignupPage() {
       const { url } = await res.json();
       window.location.href = url;
     } catch (err) {
-      console.error("Falha no cadastro", err);
-      const code = (err as { code?: string }).code;
-      if (code === "auth/email-already-in-use") {
-        setError("Já existe uma conta com esse e-mail. Faça login.");
-      } else {
-        setError("Não foi possível criar a conta. Tente novamente.");
-      }
-      setSubmitting(false);
+      console.error("Conta criada, mas falhou ao iniciar o pagamento", err);
+      navigate("/");
     }
   }
 
