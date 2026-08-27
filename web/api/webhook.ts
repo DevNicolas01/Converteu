@@ -21,11 +21,7 @@ async function findAccountBySubscription(db: Firestore, subscriptionId: string):
  * Recebe eventos do Stripe (pagamento confirmado, renovação, falha, cancelamento) e atualiza
  * accounts/{accountId} no Firestore sozinho — é isso que substitui "ficar vendo quem pagou".
  */
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secretKey || !webhookSecret) {

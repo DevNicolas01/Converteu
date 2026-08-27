@@ -22,11 +22,7 @@ async function isCallerAdmin(idToken: string): Promise<boolean> {
  * empresa) E o login no Firebase Auth. O app (client-side) só conseguia apagar os dados —
  * apagar o login de outra pessoa exige o Admin SDK, por isso isso mora numa function aqui.
  */
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   try {
     init();
   } catch (err) {

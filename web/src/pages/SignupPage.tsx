@@ -8,6 +8,7 @@ export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,15 +80,27 @@ export default function SignupPage() {
         </div>
         <div className="field">
           <label htmlFor="signup-password">Senha</label>
-          <input
-            id="signup-password"
-            className="input"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              id="signup-password"
+              className="input"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {showPassword ? "Ocultar" : "Ver"}
+            </button>
+          </div>
         </div>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
           {submitting ? "Criando..." : "Criar conta e ir pro pagamento"}

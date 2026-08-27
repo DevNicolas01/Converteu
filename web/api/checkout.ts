@@ -4,11 +4,7 @@ import Stripe from "stripe";
  * Cria uma sessão de Checkout do Stripe pra uma conta assinar (ou renovar) o Converteu.
  * O front-end chama isso e redireciona pro `url` retornado.
  */
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   let body: { accountId?: string; email?: string };
   try {
     body = await req.json();
