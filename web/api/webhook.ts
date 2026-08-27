@@ -1,4 +1,3 @@
-import Stripe from "stripe";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 
@@ -6,38 +5,49 @@ function getDb(): Firestore {
   if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT não configurada.");
-    const serviceAccount = JSON.parse(raw);
-    initializeApp({ credential: cert(serviceAccount) });
+    initializeApp({ credential: cert(JSON.parse(raw)) });
   }
   return getFirestore();
 }
 
-async function findAccountBySubscription(db: Firestore, subscriptionId: string): Promise<string | null> {
-  const snap = await db.collection("accounts").where("stripeSubscriptionId", "==", subscriptionId).limit(1).get();
+async function resolveAccountId(
+  db: Firestore,
+  payment: { externalReference?: string; subscription?: string } | undefined,
+): Promise<string | null> {
+  if (!payment) return null;
+  if (payment.externalReference) return payment.externalReference;
+  if (!payment.subscription) return null;
+  const snap = await db.collection("accounts").where("asaasSubscriptionId", "==", payment.subscription).limit(1).get();
   return snap.empty ? null : snap.docs[0].id;
 }
 
+function addDays(days: number): Timestamp {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return Timestamp.fromDate(d);
+}
+
 /**
- * Recebe eventos do Stripe (pagamento confirmado, renovação, falha, cancelamento) e atualiza
- * accounts/{accountId} no Firestore sozinho — é isso que substitui "ficar vendo quem pagou".
+ * Recebe eventos do Asaas (pagamento confirmado, atrasado, estornado) e atualiza
+ * accounts/{accountId} no Firestore sozinho — substitui "ficar vendo quem pagou".
+ * Autenticado pelo "Authentication Token" configurado no webhook do Asaas
+ * (Configurações > Integrações > Webhooks), enviado no header `asaas-access-token`.
  */
 export async function POST(req: Request): Promise<Response> {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secretKey || !webhookSecret) {
-    return new Response("Configuração do Stripe incompleta no servidor.", { status: 500 });
+  const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
+  if (!webhookToken) {
+    return new Response("Configuração do Asaas incompleta no servidor.", { status: 500 });
+  }
+  if (req.headers.get("asaas-access-token") !== webhookToken) {
+    console.error("Token do webhook do Asaas inválido");
+    return new Response("Token inválido", { status: 401 });
   }
 
-  const stripe = new Stripe(secretKey);
-  const signature = req.headers.get("stripe-signature");
-  const rawBody = await req.text();
-
-  let event: Stripe.Event;
+  let event: { event?: string; payment?: { externalReference?: string; subscription?: string } };
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature ?? "", webhookSecret);
-  } catch (err) {
-    console.error("Assinatura do webhook inválida", err);
-    return new Response("Assinatura inválida", { status: 400 });
+    event = await req.json();
+  } catch {
+    return new Response("JSON inválido", { status: 400 });
   }
 
   let db: Firestore;
@@ -49,60 +59,30 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const accountId = session.client_reference_id;
-        const subscriptionId = session.subscription as string | null;
-        if (accountId && subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    switch (event.event) {
+      case "PAYMENT_CONFIRMED":
+      case "PAYMENT_RECEIVED": {
+        const accountId = await resolveAccountId(db, event.payment);
+        if (accountId) {
           await db.doc(`accounts/${accountId}`).set(
-            {
-              status: "active",
-              subscriptionExpiresAt: Timestamp.fromMillis(subscription.current_period_end * 1000),
-              stripeCustomerId: session.customer as string,
-              stripeSubscriptionId: subscription.id,
-            },
+            { status: "active", subscriptionExpiresAt: addDays(35) },
             { merge: true },
           );
         }
         break;
       }
 
-      case "invoice.paid": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string | null;
-        if (subscriptionId) {
-          const accountId = await findAccountBySubscription(db, subscriptionId);
-          if (accountId) {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            await db.doc(`accounts/${accountId}`).set(
-              {
-                status: "active",
-                subscriptionExpiresAt: Timestamp.fromMillis(subscription.current_period_end * 1000),
-              },
-              { merge: true },
-            );
-          }
+      case "PAYMENT_OVERDUE": {
+        const accountId = await resolveAccountId(db, event.payment);
+        if (accountId) {
+          await db.doc(`accounts/${accountId}`).set({ status: "payment_failed" }, { merge: true });
         }
         break;
       }
 
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string | null;
-        if (subscriptionId) {
-          const accountId = await findAccountBySubscription(db, subscriptionId);
-          if (accountId) {
-            await db.doc(`accounts/${accountId}`).set({ status: "payment_failed" }, { merge: true });
-          }
-        }
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        const accountId = await findAccountBySubscription(db, subscription.id);
+      case "PAYMENT_DELETED":
+      case "PAYMENT_REFUNDED": {
+        const accountId = await resolveAccountId(db, event.payment);
         if (accountId) {
           await db.doc(`accounts/${accountId}`).set({ status: "suspended" }, { merge: true });
         }
@@ -110,7 +90,7 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
   } catch (err) {
-    console.error(`Falha ao processar evento ${event.type}`, err);
+    console.error(`Falha ao processar evento ${event.event}`, err);
     return new Response("Erro ao processar evento", { status: 500 });
   }
 

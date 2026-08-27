@@ -1,11 +1,39 @@
-import Stripe from "stripe";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+
+function getDb(): Firestore {
+  if (!getApps().length) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT não configurada.");
+    initializeApp({ credential: cert(JSON.parse(raw)) });
+  }
+  return getFirestore();
+}
+
+function asaasBaseUrl(): string {
+  return process.env.ASAAS_ENV === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+}
+
+async function asaasFetch(path: string, init: RequestInit = {}) {
+  const apiKey = process.env.ASAAS_API_KEY;
+  if (!apiKey) throw new Error("ASAAS_API_KEY não configurada.");
+  const res = await fetch(`${asaasBaseUrl()}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", access_token: apiKey, ...init.headers },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Asaas ${path} falhou: ${JSON.stringify(data)}`);
+  return data;
+}
+
+type AsaasPayment = { status: string; invoiceUrl: string };
 
 /**
- * Cria uma sessão de Checkout do Stripe pra uma conta assinar (ou renovar) o Converteu.
- * O front-end chama isso e redireciona pro `url` retornado.
+ * Cria (ou reaproveita) o cliente e a assinatura no Asaas pra uma conta assinar/renovar o
+ * Converteu, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
  */
 export async function POST(req: Request): Promise<Response> {
-  let body: { accountId?: string; email?: string };
+  let body: { accountId?: string; email?: string; name?: string; cpfCnpj?: string };
   try {
     body = await req.json();
   } catch {
@@ -17,31 +45,62 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("accountId e email são obrigatórios", { status: 400 });
   }
 
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!secretKey || !priceId) {
-    return new Response("Configuração do Stripe incompleta no servidor.", { status: 500 });
+  const value = Number(process.env.ASAAS_SUBSCRIPTION_VALUE);
+  if (!value) {
+    return new Response("Configuração do Asaas incompleta no servidor.", { status: 500 });
   }
 
-  const stripe = new Stripe(secretKey);
-  const origin = req.headers.get("origin") || "https://web-kappa-three-73.vercel.app";
-
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      client_reference_id: accountId,
-      customer_email: email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: { metadata: { accountId } },
-      success_url: `${origin}/?checkout=sucesso`,
-      cancel_url: `${origin}/?checkout=cancelado`,
-    });
-    return new Response(JSON.stringify({ url: session.url }), {
+    const db = getDb();
+    const accountRef = db.doc(`accounts/${accountId}`);
+    const accountSnap = await accountRef.get();
+    const data = accountSnap.data() || {};
+
+    let customerId = data.asaasCustomerId as string | undefined;
+    if (!customerId) {
+      const cpfCnpj = (body.cpfCnpj || "").replace(/\D/g, "");
+      if (!cpfCnpj) {
+        return new Response("CPF ou CNPJ é obrigatório pra gerar a cobrança.", { status: 400 });
+      }
+      const customer = await asaasFetch("/customers", {
+        method: "POST",
+        body: JSON.stringify({ name: body.name || email, email, cpfCnpj, externalReference: accountId }),
+      });
+      customerId = customer.id as string;
+      await accountRef.set({ asaasCustomerId: customerId }, { merge: true });
+    }
+
+    let subscriptionId = data.asaasSubscriptionId as string | undefined;
+    if (!subscriptionId) {
+      const subscription = await asaasFetch("/subscriptions", {
+        method: "POST",
+        body: JSON.stringify({
+          customer: customerId,
+          billingType: "UNDEFINED",
+          cycle: "MONTHLY",
+          value,
+          nextDueDate: new Date().toISOString().slice(0, 10),
+          description: "Assinatura Converteu",
+          externalReference: accountId,
+        }),
+      });
+      subscriptionId = subscription.id as string;
+      await accountRef.set({ asaasSubscriptionId: subscriptionId }, { merge: true });
+    }
+
+    const paymentsResp = await asaasFetch(`/payments?subscription=${subscriptionId}&limit=10`);
+    const list = (paymentsResp?.data || []) as AsaasPayment[];
+    const pending = list.find((p) => p.status === "PENDING" || p.status === "OVERDUE") || list[0];
+    if (!pending?.invoiceUrl) {
+      return new Response("Não foi possível gerar o link de pagamento.", { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ url: pending.invoiceUrl }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Falha ao criar sessão de checkout", err);
+    console.error("Falha ao criar cobrança no Asaas", err);
     return new Response("Não foi possível iniciar o pagamento.", { status: 500 });
   }
 }

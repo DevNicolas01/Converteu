@@ -6,6 +6,7 @@ import { auth, db } from "../lib/firebase";
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +17,10 @@ export default function SignupPage() {
     e.preventDefault();
     if (!companyName.trim()) {
       setError("Informe o nome da empresa.");
+      return;
+    }
+    if (cpfCnpj.replace(/\D/g, "").length < 11) {
+      setError("Informe um CPF ou CNPJ válido.");
       return;
     }
     if (password.length < 6) {
@@ -38,7 +43,12 @@ export default function SignupPage() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: uid, email: email.trim() }),
+        body: JSON.stringify({
+          accountId: uid,
+          email: email.trim(),
+          name: companyName.trim(),
+          cpfCnpj: cpfCnpj.replace(/\D/g, ""),
+        }),
       });
       if (!res.ok) throw new Error("Falha ao iniciar pagamento");
       const { url } = await res.json();
@@ -65,6 +75,21 @@ export default function SignupPage() {
         <div className="field">
           <label htmlFor="signup-company">Nome da empresa</label>
           <input id="signup-company" className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="signup-cpfcnpj">CPF ou CNPJ</label>
+          <input
+            id="signup-cpfcnpj"
+            className="input"
+            inputMode="numeric"
+            placeholder="Só números"
+            value={cpfCnpj}
+            onChange={(e) => setCpfCnpj(e.target.value)}
+            required
+          />
+          <p className="panel-help" style={{ margin: "4px 0 0" }}>
+            Necessário pra gerar a cobrança da assinatura.
+          </p>
         </div>
         <div className="field">
           <label htmlFor="signup-email">E-mail</label>
