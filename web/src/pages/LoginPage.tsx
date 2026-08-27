@@ -6,6 +6,7 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,15 +46,27 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
         </div>
         <div className="field">
           <label htmlFor="login-password">Senha</label>
-          <input
-            id="login-password"
-            className="input"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              id="login-password"
+              className="input"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {showPassword ? "Ocultar" : "Ver"}
+            </button>
+          </div>
         </div>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
           Entrar
