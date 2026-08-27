@@ -121,12 +121,22 @@ export async function adminSetAccountStatus(accountId: string, status: string) {
  * o que exigiria Blaze) — mas sem doc em accounts/{id}, ele não consegue mais entrar em
  * nada: cai direto em "conta não encontrada".
  */
+/**
+ * Apaga a conta (dados + login) via backend — apagar o login de outra pessoa exige o
+ * Admin SDK, o client-side só conseguiria apagar os dados e deixaria o e-mail "preso".
+ */
 export async function adminDeleteAccount(accountId: string) {
-  for (const sub of ["companyProfile", "proposals", "emailLogs"]) {
-    const snap = await getDocs(collection(db, "accounts", accountId, sub));
-    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error("Não autenticado.");
+  const res = await fetch("/api/admin-delete-account", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ accountId }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Falha ao excluir conta.");
   }
-  await deleteDoc(doc(db, "accounts", accountId));
 }
 
 export interface AdminCompanyProfile {
