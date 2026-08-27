@@ -1,4 +1,4 @@
-import { formatBRL, num, type Deal } from "../lib/calc";
+import { formatBRL, num, isThisMonth, type Deal } from "../lib/calc";
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
@@ -7,13 +7,6 @@ function Tile({ label, value }: { label: string; value: string }) {
       <p className="metric-value">{value}</p>
     </div>
   );
-}
-
-function isThisMonth(iso: string | null | undefined) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
 
 export default function SalesOverview({ deals }: { deals: Deal[] }) {

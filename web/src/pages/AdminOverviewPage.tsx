@@ -324,7 +324,8 @@ export default function AdminOverviewPage() {
                           {acc.status}
                           {isExpired ? " (vencida)" : ""} — vence {formatDate(expiresAt)} ({daysRemainingLabel(expiresAt)})
                           {" · "}
-                          {PLANS.find((p) => p.id === acc.plan)?.label || "Completo"}
+                          {PLANS.find((p) => p.id === acc.plan)?.label || "Sem plano"}
+                          {acc.billingCycle ? ` (${acc.billingCycle})` : ""}
                         </p>
                       </div>
                       <div style={{ gridArea: "email" }} className="microlabel">

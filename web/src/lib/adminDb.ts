@@ -21,6 +21,7 @@ export interface AdminAccount {
   email?: string;
   status?: string;
   plan?: string;
+  billingCycle?: string;
   subscriptionExpiresAt?: { toDate?: () => Date } | Date | null;
   [key: string]: unknown;
 }

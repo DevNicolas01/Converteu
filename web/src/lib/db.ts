@@ -18,6 +18,7 @@ export interface AccountStatus {
   email?: string;
   status?: string;
   plan?: string;
+  billingCycle?: string;
   subscriptionExpiresAt: Date | null;
   isExpired: boolean;
   isSuspended: boolean;

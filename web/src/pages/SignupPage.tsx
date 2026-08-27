@@ -1,9 +1,12 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import { PLANS, formatBRL, type PlanId } from "../lib/calc";
+import { PLANS, PLAN_PRICES, formatBRL, type PlanId, type BillingCycle } from "../lib/calc";
+
+const FAR_FUTURE = new Date();
+FAR_FUTURE.setFullYear(FAR_FUTURE.getFullYear() + 100);
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
@@ -11,18 +14,11 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [plan, setPlan] = useState<PlanId>("all");
-  const [prices, setPrices] = useState<Record<string, number | null>>({});
+  const [plan, setPlan] = useState<PlanId>("start");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("mensal");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetch("/api/plans")
-      .then((res) => res.json())
-      .then(setPrices)
-      .catch(() => setPrices({}));
-  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -49,7 +45,10 @@ export default function SignupPage() {
         companyName: companyName.trim(),
         email: email.trim(),
         ownerUid: uid,
-        status: "pending_payment",
+        plan,
+        billingCycle,
+        status: plan === "teste" ? "active" : "pending_payment",
+        subscriptionExpiresAt: plan === "teste" ? Timestamp.fromDate(FAR_FUTURE) : null,
         createdAt: Timestamp.now(),
       });
     } catch (err) {
@@ -61,6 +60,11 @@ export default function SignupPage() {
         setError("Não foi possível criar a conta. Tente novamente.");
       }
       setSubmitting(false);
+      return;
+    }
+
+    if (plan === "teste") {
+      navigate("/");
       return;
     }
 
@@ -76,6 +80,7 @@ export default function SignupPage() {
           name: companyName.trim(),
           cpfCnpj: cpfCnpj.replace(/\D/g, ""),
           plan,
+          billingCycle,
         }),
       });
       if (!res.ok) throw new Error("Falha ao iniciar pagamento");
@@ -118,26 +123,42 @@ export default function SignupPage() {
             Escolha o plano
           </legend>
           {PLANS.map((p) => {
-            const price = prices[p.id];
+            const price = p.id === "teste" ? 0 : PLAN_PRICES[p.id][billingCycle];
             return (
               <label
                 key={p.id}
                 className="input"
                 style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}
               >
-                <input
-                  type="radio"
-                  name="plan"
-                  value={p.id}
-                  checked={plan === p.id}
-                  onChange={() => setPlan(p.id)}
-                />
-                <span style={{ flex: 1 }}>{p.label}</span>
-                <strong>{price ? `${formatBRL(price)}/mês` : "..."}</strong>
+                <input type="radio" name="plan" value={p.id} checked={plan === p.id} onChange={() => setPlan(p.id)} />
+                <span style={{ flex: 1 }}>
+                  {p.label} <span className="microlabel">({p.limit ? `até ${p.limit}/mês` : "ilimitado"})</span>
+                </span>
+                <strong>
+                  {price === 0
+                    ? "Grátis"
+                    : billingCycle === "anual"
+                      ? `${formatBRL(price)}/ano`
+                      : `${formatBRL(price)}/mês`}
+                </strong>
               </label>
             );
           })}
         </fieldset>
+        {plan !== "teste" && (
+          <div className="field">
+            <label htmlFor="signup-cycle">Cobrança</label>
+            <select
+              id="signup-cycle"
+              className="input"
+              value={billingCycle}
+              onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
+            >
+              <option value="mensal">Mensal</option>
+              <option value="anual">Anual (10x o valor do mês, com desconto)</option>
+            </select>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="signup-email">E-mail</label>
           <input
@@ -175,7 +196,7 @@ export default function SignupPage() {
           </div>
         </div>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
-          {submitting ? "Criando..." : "Criar conta e ir pro pagamento"}
+          {submitting ? "Criando..." : plan === "teste" ? "Criar conta grátis" : "Criar conta e ir pro pagamento"}
         </button>
         <p className="save-msg" role="alert" aria-live="assertive">
           {error}

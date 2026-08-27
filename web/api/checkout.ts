@@ -1,5 +1,6 @@
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { PLANS, PLAN_PRICES, type PlanId, type BillingCycle } from "../src/lib/calc";
 
 function getDb(): Firestore {
   if (!getApps().length) {
@@ -28,44 +29,41 @@ async function asaasFetch(path: string, init: RequestInit = {}) {
 
 type AsaasPayment = { status: string; invoiceUrl: string };
 
-const PLAN_ENV: Record<string, string> = {
-  calc: "ASAAS_VALUE_CALC",
-  funil: "ASAAS_VALUE_FUNIL",
-  painel: "ASAAS_VALUE_PAINEL",
-  all: "ASAAS_VALUE_ALL",
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  calc: "Calculadora",
-  funil: "Follow-up",
-  painel: "Painel",
-  all: "Completo",
-};
-
 /**
  * Cria (ou reaproveita) o cliente e a assinatura no Asaas pra uma conta assinar/renovar/trocar
  * de plano do Converteu, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
+ * O plano "teste" é gratuito e nunca deveria chegar aqui (ativado direto no cadastro).
  */
 export async function POST(req: Request): Promise<Response> {
-  let body: { accountId?: string; email?: string; name?: string; cpfCnpj?: string; plan?: string };
+  let body: {
+    accountId?: string;
+    email?: string;
+    name?: string;
+    cpfCnpj?: string;
+    plan?: string;
+    billingCycle?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return new Response("JSON inválido", { status: 400 });
   }
 
-  const { accountId, email, plan } = body;
+  const { accountId, email } = body;
+  const plan = body.plan as PlanId | undefined;
+  const billingCycle = (body.billingCycle as BillingCycle | undefined) || "mensal";
   if (!accountId || !email) {
     return new Response("accountId e email são obrigatórios", { status: 400 });
   }
-  if (!plan || !PLAN_ENV[plan]) {
+  if (!plan || plan === "teste" || !PLAN_PRICES[plan]) {
     return new Response("Plano inválido.", { status: 400 });
   }
-
-  const value = Number(process.env[PLAN_ENV[plan]]);
-  if (!value) {
-    return new Response("Configuração do Asaas incompleta no servidor.", { status: 500 });
+  if (billingCycle !== "mensal" && billingCycle !== "anual") {
+    return new Response("Ciclo de cobrança inválido.", { status: 400 });
   }
+
+  const value = PLAN_PRICES[plan][billingCycle];
+  const planLabel = PLANS.find((p) => p.id === plan)?.label || plan;
 
   try {
     const db = getDb();
@@ -89,8 +87,9 @@ export async function POST(req: Request): Promise<Response> {
 
     let subscriptionId = data.asaasSubscriptionId as string | undefined;
     const storedPlan = data.plan as string | undefined;
+    const storedCycle = data.billingCycle as string | undefined;
 
-    if (subscriptionId && storedPlan && storedPlan !== plan) {
+    if (subscriptionId && storedPlan && (storedPlan !== plan || storedCycle !== billingCycle)) {
       try {
         await asaasFetch(`/subscriptions/${subscriptionId}`, { method: "DELETE" });
       } catch (err) {
@@ -105,16 +104,16 @@ export async function POST(req: Request): Promise<Response> {
         body: JSON.stringify({
           customer: customerId,
           billingType: "UNDEFINED",
-          cycle: "MONTHLY",
+          cycle: billingCycle === "anual" ? "YEARLY" : "MONTHLY",
           value,
           nextDueDate: new Date().toISOString().slice(0, 10),
-          description: `Assinatura Converteu - ${PLAN_LABELS[plan]}`,
+          description: `Assinatura Converteu - ${planLabel} (${billingCycle})`,
           externalReference: accountId,
         }),
       });
       subscriptionId = subscription.id as string;
     }
-    await accountRef.set({ asaasSubscriptionId: subscriptionId, plan }, { merge: true });
+    await accountRef.set({ asaasSubscriptionId: subscriptionId, plan, billingCycle }, { merge: true });
 
     const paymentsResp = await asaasFetch(`/payments?subscription=${subscriptionId}&limit=10`);
     const list = (paymentsResp?.data || []) as AsaasPayment[];

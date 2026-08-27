@@ -64,8 +64,10 @@ export async function POST(req: Request): Promise<Response> {
       case "PAYMENT_RECEIVED": {
         const accountId = await resolveAccountId(db, event.payment);
         if (accountId) {
+          const accountSnap = await db.doc(`accounts/${accountId}`).get();
+          const graceDays = accountSnap.data()?.billingCycle === "anual" ? 380 : 35;
           await db.doc(`accounts/${accountId}`).set(
-            { status: "active", subscriptionExpiresAt: addDays(35) },
+            { status: "active", subscriptionExpiresAt: addDays(graceDays) },
             { merge: true },
           );
         }
