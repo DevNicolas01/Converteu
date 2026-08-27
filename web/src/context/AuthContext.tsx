@@ -5,7 +5,8 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 
 interface AuthState {
   user: User | null;
@@ -32,7 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       await u.getIdToken(true);
       const { claims } = await u.getIdTokenResult();
-      setIsAdmin(claims.admin === true);
+      // Admin por custom claim (o primeiro admin, definido via script) OU por ter um doc
+      // em admins/{uid} (quem foi adicionado depois, pelo próprio painel) — mesma lógica
+      // usada nas regras do Firestore, senão esse admin fica bloqueado só no app.
+      let admin = claims.admin === true;
+      if (!admin) {
+        try {
+          const snap = await getDoc(doc(db, "admins", u.uid));
+          admin = snap.exists();
+        } catch {
+          admin = false;
+        }
+      }
+      setIsAdmin(admin);
       setUser(u);
       setLoading(false);
     });

@@ -7,7 +7,7 @@ import AdminOverviewPage from "./pages/AdminOverviewPage";
 import AdminAccountPage from "./pages/AdminAccountPage";
 
 function Gate({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, logout } = useAuth();
   if (loading) return <div className="auth-screen" />;
   if (!user) return <LoginPage adminHint={requireAdmin} />;
   if (requireAdmin && !isAdmin) {
@@ -15,7 +15,12 @@ function Gate({ children, requireAdmin = false }: { children: React.ReactNode; r
       <div className="auth-screen">
         <div className="panel auth-panel">
           <h2 className="panel-title">Acesso restrito</h2>
-          <p className="panel-help">Esta conta não tem permissão de admin.</p>
+          <p className="panel-help">
+            A conta <strong>{user.email}</strong> não tem permissão de admin.
+          </p>
+          <button className="save-btn" style={{ width: "100%" }} onClick={() => logout()}>
+            Sair e entrar com outra conta
+          </button>
         </div>
       </div>
     );
