@@ -20,6 +20,7 @@ export interface AdminAccount {
   companyName?: string;
   email?: string;
   status?: string;
+  plan?: string;
   subscriptionExpiresAt?: { toDate?: () => Date } | Date | null;
   [key: string]: unknown;
 }

@@ -17,6 +17,7 @@ export interface AccountStatus {
   companyName?: string;
   email?: string;
   status?: string;
+  plan?: string;
   subscriptionExpiresAt: Date | null;
   isExpired: boolean;
   isSuspended: boolean;

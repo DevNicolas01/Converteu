@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { PLANS, formatBRL, type PlanId } from "../lib/calc";
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
@@ -10,8 +11,17 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [plan, setPlan] = useState<PlanId>("all");
+  const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/plans")
+      .then((res) => res.json())
+      .then(setPrices)
+      .catch(() => setPrices({}));
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,6 +58,7 @@ export default function SignupPage() {
           email: email.trim(),
           name: companyName.trim(),
           cpfCnpj: cpfCnpj.replace(/\D/g, ""),
+          plan,
         }),
       });
       if (!res.ok) throw new Error("Falha ao iniciar pagamento");
@@ -91,6 +102,31 @@ export default function SignupPage() {
             Necessário pra gerar a cobrança da assinatura.
           </p>
         </div>
+        <fieldset className="field" style={{ border: "none", padding: 0, margin: 0 }}>
+          <legend className="panel-help" style={{ padding: 0, marginBottom: 6 }}>
+            Escolha o plano
+          </legend>
+          {PLANS.map((p) => {
+            const price = prices[p.id];
+            return (
+              <label
+                key={p.id}
+                className="input"
+                style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}
+              >
+                <input
+                  type="radio"
+                  name="plan"
+                  value={p.id}
+                  checked={plan === p.id}
+                  onChange={() => setPlan(p.id)}
+                />
+                <span style={{ flex: 1 }}>{p.label}</span>
+                <strong>{price ? `${formatBRL(price)}/mês` : "..."}</strong>
+              </label>
+            );
+          })}
+        </fieldset>
         <div className="field">
           <label htmlFor="signup-email">E-mail</label>
           <input

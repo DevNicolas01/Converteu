@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { PLANS } from "../lib/calc";
 import {
   adminListAccounts,
   adminGetDashboardStats,
@@ -322,6 +323,8 @@ export default function AdminOverviewPage() {
                         <p className="microlabel">
                           {acc.status}
                           {isExpired ? " (vencida)" : ""} — vence {formatDate(expiresAt)} ({daysRemainingLabel(expiresAt)})
+                          {" · "}
+                          {PLANS.find((p) => p.id === acc.plan)?.label || "Completo"}
                         </p>
                       </div>
                       <div style={{ gridArea: "email" }} className="microlabel">

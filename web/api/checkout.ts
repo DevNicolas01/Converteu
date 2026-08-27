@@ -28,24 +28,41 @@ async function asaasFetch(path: string, init: RequestInit = {}) {
 
 type AsaasPayment = { status: string; invoiceUrl: string };
 
+const PLAN_ENV: Record<string, string> = {
+  calc: "ASAAS_VALUE_CALC",
+  funil: "ASAAS_VALUE_FUNIL",
+  painel: "ASAAS_VALUE_PAINEL",
+  all: "ASAAS_VALUE_ALL",
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  calc: "Calculadora",
+  funil: "Follow-up",
+  painel: "Painel",
+  all: "Completo",
+};
+
 /**
- * Cria (ou reaproveita) o cliente e a assinatura no Asaas pra uma conta assinar/renovar o
- * Converteu, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
+ * Cria (ou reaproveita) o cliente e a assinatura no Asaas pra uma conta assinar/renovar/trocar
+ * de plano do Converteu, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
  */
 export async function POST(req: Request): Promise<Response> {
-  let body: { accountId?: string; email?: string; name?: string; cpfCnpj?: string };
+  let body: { accountId?: string; email?: string; name?: string; cpfCnpj?: string; plan?: string };
   try {
     body = await req.json();
   } catch {
     return new Response("JSON inválido", { status: 400 });
   }
 
-  const { accountId, email } = body;
+  const { accountId, email, plan } = body;
   if (!accountId || !email) {
     return new Response("accountId e email são obrigatórios", { status: 400 });
   }
+  if (!plan || !PLAN_ENV[plan]) {
+    return new Response("Plano inválido.", { status: 400 });
+  }
 
-  const value = Number(process.env.ASAAS_SUBSCRIPTION_VALUE);
+  const value = Number(process.env[PLAN_ENV[plan]]);
   if (!value) {
     return new Response("Configuração do Asaas incompleta no servidor.", { status: 500 });
   }
@@ -71,6 +88,17 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     let subscriptionId = data.asaasSubscriptionId as string | undefined;
+    const storedPlan = data.plan as string | undefined;
+
+    if (subscriptionId && storedPlan && storedPlan !== plan) {
+      try {
+        await asaasFetch(`/subscriptions/${subscriptionId}`, { method: "DELETE" });
+      } catch (err) {
+        console.error("Falha ao cancelar assinatura anterior no Asaas", err);
+      }
+      subscriptionId = undefined;
+    }
+
     if (!subscriptionId) {
       const subscription = await asaasFetch("/subscriptions", {
         method: "POST",
@@ -80,13 +108,13 @@ export async function POST(req: Request): Promise<Response> {
           cycle: "MONTHLY",
           value,
           nextDueDate: new Date().toISOString().slice(0, 10),
-          description: "Assinatura Converteu",
+          description: `Assinatura Converteu - ${PLAN_LABELS[plan]}`,
           externalReference: accountId,
         }),
       });
       subscriptionId = subscription.id as string;
-      await accountRef.set({ asaasSubscriptionId: subscriptionId }, { merge: true });
     }
+    await accountRef.set({ asaasSubscriptionId: subscriptionId, plan }, { merge: true });
 
     const paymentsResp = await asaasFetch(`/payments?subscription=${subscriptionId}&limit=10`);
     const list = (paymentsResp?.data || []) as AsaasPayment[];

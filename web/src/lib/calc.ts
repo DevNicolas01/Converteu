@@ -130,6 +130,14 @@ export function emptyDeal(): Deal {
   };
 }
 
+export const PLANS = [
+  { id: "calc", label: "Calculadora" },
+  { id: "funil", label: "Follow-up" },
+  { id: "painel", label: "Painel" },
+  { id: "all", label: "Completo (todas as funções)" },
+] as const;
+export type PlanId = (typeof PLANS)[number]["id"];
+
 export function num(v: unknown): number {
   const n = parseFloat(String(v));
   return isNaN(n) ? 0 : n;

@@ -23,6 +23,17 @@ import { UserIcon, LogoutIcon } from "./Icons";
 
 type Tab = "calc" | "funil" | "painel";
 
+const PLAN_TABS: Record<string, Tab[]> = {
+  calc: ["calc"],
+  funil: ["funil"],
+  painel: ["painel"],
+  all: ["calc", "funil", "painel"],
+};
+
+function allowedTabsFor(plan: string | undefined): Tab[] {
+  return PLAN_TABS[plan || "all"] || PLAN_TABS.all;
+}
+
 export default function AccountShell({ accountId, asAdmin = false }: { accountId: string; asAdmin?: boolean }) {
   const { logout } = useAuth();
   const [status, setStatus] = useState<AccountStatus | null>(null);
@@ -58,6 +69,12 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId]);
+
+  useEffect(() => {
+    if (!status) return;
+    const allowed = allowedTabsFor(status.plan);
+    setTab((t) => (allowed.includes(t) ? t : allowed[0]));
+  }, [status]);
 
   if (loadErr) {
     return (
@@ -106,7 +123,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
                   const res = await fetch("/api/checkout", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ accountId, email: status.email }),
+                    body: JSON.stringify({ accountId, email: status.email, plan: status.plan || "all" }),
                   });
                   const { url } = await res.json();
                   window.location.href = url;
@@ -200,15 +217,21 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         </div>
         <div className="nav-area">
           <nav className="tabnav" aria-label="Seções do painel">
-            <button className={`tabbtn${tab === "calc" ? " active" : ""}`} aria-current={tab === "calc" ? "page" : undefined} onClick={() => setTab("calc")}>
-              Calculadora
-            </button>
-            <button className={`tabbtn${tab === "funil" ? " active" : ""}`} aria-current={tab === "funil" ? "page" : undefined} onClick={() => setTab("funil")}>
-              Propostas
-            </button>
-            <button className={`tabbtn${tab === "painel" ? " active" : ""}`} aria-current={tab === "painel" ? "page" : undefined} onClick={() => setTab("painel")}>
-              Resultados
-            </button>
+            {allowedTabsFor(status.plan).includes("calc") && (
+              <button className={`tabbtn${tab === "calc" ? " active" : ""}`} aria-current={tab === "calc" ? "page" : undefined} onClick={() => setTab("calc")}>
+                Calculadora
+              </button>
+            )}
+            {allowedTabsFor(status.plan).includes("funil") && (
+              <button className={`tabbtn${tab === "funil" ? " active" : ""}`} aria-current={tab === "funil" ? "page" : undefined} onClick={() => setTab("funil")}>
+                Propostas
+              </button>
+            )}
+            {allowedTabsFor(status.plan).includes("painel") && (
+              <button className={`tabbtn${tab === "painel" ? " active" : ""}`} aria-current={tab === "painel" ? "page" : undefined} onClick={() => setTab("painel")}>
+                Resultados
+              </button>
+            )}
           </nav>
           <ThemeToggle />
           <button className="theme-toggle" title="Perfil" aria-label="Perfil" onClick={() => setShowCompanyEditor(true)}>
