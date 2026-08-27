@@ -92,13 +92,22 @@ export async function deleteProposal(accountId: string, id: string) {
   await deleteDoc(doc(db, "accounts", accountId, "proposals", id));
 }
 
-export async function getCompanyProfile(accountId: string) {
-  const snap = await getDoc(doc(db, "accounts", accountId, "companyProfile", "profile"));
-  return snap.exists() ? (snap.data() as { companyName?: string; logoUrl?: string | null }) : { companyName: "", logoUrl: null };
+export interface CompanyProfile {
+  companyName?: string;
+  logoUrl?: string | null;
+  cnpj?: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
 }
 
-export async function saveCompanyProfile(accountId: string, companyName: string) {
-  await setDoc(doc(db, "accounts", accountId, "companyProfile", "profile"), { companyName }, { merge: true });
+export async function getCompanyProfile(accountId: string): Promise<CompanyProfile> {
+  const snap = await getDoc(doc(db, "accounts", accountId, "companyProfile", "profile"));
+  return snap.exists() ? (snap.data() as CompanyProfile) : { companyName: "", logoUrl: null };
+}
+
+export async function saveCompanyProfile(accountId: string, data: Omit<CompanyProfile, "logoUrl">) {
+  await setDoc(doc(db, "accounts", accountId, "companyProfile", "profile"), data, { merge: true });
 }
 
 export async function uploadCompanyLogo(accountId: string, file: File) {

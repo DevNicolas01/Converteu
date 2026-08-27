@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import type { CompanyProfile } from "../lib/db";
 
 interface Props {
-  initialName: string;
-  initialLogoUrl?: string | null;
-  onSave: (name: string, logoFile: File | null) => Promise<void>;
+  initial: CompanyProfile;
+  onSave: (data: Omit<CompanyProfile, "logoUrl">, logoFile: File | null) => Promise<void>;
   onCancel?: () => void;
   /** Quando true, não desenha o wrapper de tela cheia (usado dentro de um Modal). */
   bare?: boolean;
 }
 
-export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, onCancel, bare = false }: Props) {
-  const [name, setName] = useState(initialName);
+export default function CompanySetupForm({ initial, onSave, onCancel, bare = false }: Props) {
+  const [name, setName] = useState(initial.companyName || "");
+  const [cnpj, setCnpj] = useState(initial.cnpj || "");
+  const [endereco, setEndereco] = useState(initial.endereco || "");
+  const [telefone, setTelefone] = useState(initial.telefone || "");
+  const [email, setEmail] = useState(initial.email || "");
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(initialLogoUrl || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initial.logoUrl || null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,7 +37,7 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
     setSaving(true);
     setMsg("");
     try {
-      await onSave(name.trim(), file);
+      await onSave({ companyName: name.trim(), cnpj: cnpj.trim(), endereco: endereco.trim(), telefone: telefone.trim(), email: email.trim() }, file);
     } catch (err) {
       console.error("Falha ao salvar dados da empresa", err);
       setMsg("Não foi possível salvar.");
@@ -46,11 +50,27 @@ export default function CompanySetupForm({ initialName, initialLogoUrl, onSave, 
     <form className="panel auth-panel" onSubmit={handleSubmit}>
       <h2 className="panel-title">Dados da empresa</h2>
       <p className="panel-help" style={{ marginTop: 0 }}>
-        Nome e logo aparecem no PDF de todos os orçamentos.
+        Aparecem no PDF de todos os orçamentos.
       </p>
       <div className="field">
         <label htmlFor="company-name">Nome da empresa (obrigatório)</label>
         <input id="company-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Arrow Shot" required />
+      </div>
+      <div className="field">
+        <label htmlFor="company-cnpj">CNPJ (opcional)</label>
+        <input id="company-cnpj" className="input" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0001-00" />
+      </div>
+      <div className="field">
+        <label htmlFor="company-endereco">Endereço (opcional)</label>
+        <input id="company-endereco" className="input" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, cidade" />
+      </div>
+      <div className="field">
+        <label htmlFor="company-telefone">Telefone (opcional)</label>
+        <input id="company-telefone" className="input" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+      </div>
+      <div className="field">
+        <label htmlFor="company-email">E-mail de contato (opcional)</label>
+        <input id="company-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" />
       </div>
       <div className="field">
         <span id="company-logo-label">Logo da empresa (opcional)</span>

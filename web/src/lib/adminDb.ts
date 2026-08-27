@@ -95,23 +95,6 @@ export async function adminRemoveAdmin(uid: string) {
   await deleteDoc(doc(db, "admins", uid));
 }
 
-export async function adminCreateAccount(params: { companyName: string; email: string; subscriptionMonths?: number }) {
-  const { companyName, email, subscriptionMonths = 1 } = params;
-  const uid = await createAuthUserWithoutSignIn(email);
-  const expiresAt = new Date();
-  expiresAt.setMonth(expiresAt.getMonth() + subscriptionMonths);
-  await setDoc(doc(db, "accounts", uid), {
-    companyName,
-    email,
-    ownerUid: uid,
-    status: "active",
-    subscriptionExpiresAt: Timestamp.fromDate(expiresAt),
-    createdAt: Timestamp.now(),
-  });
-  await sendPasswordResetEmail(auth, email);
-  return { accountId: uid };
-}
-
 async function getAccountExpiry(accountId: string) {
   const snap = await getDoc(doc(db, "accounts", accountId));
   const data = snap.data() as { subscriptionExpiresAt?: { toDate?: () => Date } } | undefined;

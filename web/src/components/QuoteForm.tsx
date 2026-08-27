@@ -9,18 +9,18 @@ import {
   num,
   ROLES,
   LEAD_SOURCES,
+  CLIENT_TYPES,
   PAID_TRAFFIC_CHANNELS,
   type Deal,
   type ProdutoItem,
 } from "../lib/calc";
 import { downloadClientPdf, downloadInternalPdf } from "../lib/pdf";
-import VisitChecklistTips from "./VisitChecklistTips";
 import PresentationView from "./PresentationView";
+import type { CompanyProfile } from "../lib/db";
 
 interface Props {
   initialDeal?: Deal | null;
-  companyName: string;
-  logoUrl?: string | null;
+  company: CompanyProfile;
   obraNumero: number;
   onSave: (deal: Deal) => Promise<void>;
   onCancelEdit?: () => void;
@@ -36,7 +36,7 @@ function field(label: string, input: ReactElement<{ id?: string }>, key: string)
   );
 }
 
-export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumero, onSave, onCancelEdit }: Props) {
+export default function QuoteForm({ initialDeal, company, obraNumero, onSave, onCancelEdit }: Props) {
   const [deal, setDeal] = useState<Deal>(() => initialDeal || emptyDeal());
   const [saving, setSaving] = useState(false);
   const [presenting, setPresenting] = useState(false);
@@ -77,31 +77,6 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
     setDeal((d) => ({ ...d, produtos: (d.produtos || []).filter((_, i) => i !== index) }));
   }
 
-  const [checklistChecked, setChecklistChecked] = useState<Set<string>>(new Set());
-
-  function toggleChecklistItem(item: string) {
-    const line = `• ${item}`;
-    setChecklistChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(item)) {
-        next.delete(item);
-        setDeal((d) => ({
-          ...d,
-          observacoesVisita: d.observacoesVisita
-            .split("\n")
-            .filter((l) => l !== line)
-            .join("\n"),
-        }));
-      } else {
-        next.add(item);
-        setDeal((d) => ({
-          ...d,
-          observacoesVisita: d.observacoesVisita ? `${d.observacoesVisita}\n${line}` : line,
-        }));
-      }
-      return next;
-    });
-  }
 
   async function handleSave() {
     if (!deal.clientName.trim()) {
@@ -126,16 +101,15 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
   }
 
   async function handleDownloadClientPdf() {
-    await downloadClientPdf({ ...deal, valorFinal: calc.valorFinal }, companyName, logoUrl, deal.obraNumero || obraNumero);
+    await downloadClientPdf({ ...deal, valorFinal: calc.valorFinal }, company, deal.obraNumero || obraNumero);
   }
 
   async function handleDownloadInternalPdf() {
-    await downloadInternalPdf({ ...deal, valorFinal: calc.valorFinal }, companyName, logoUrl, deal.obraNumero || obraNumero);
+    await downloadInternalPdf({ ...deal, valorFinal: calc.valorFinal }, company, deal.obraNumero || obraNumero);
   }
 
   return (
     <>
-      <VisitChecklistTips checked={checklistChecked} onToggle={toggleChecklistItem} />
       <div className="quote-grid">
       <div className="panel">
         <h2 className="panel-title">{isEditing ? "Editar orçamento" : "Novo orçamento"}</h2>
@@ -145,10 +119,13 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
           {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
           {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
           {field(
-            "Tipo de cliente",
-            <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value as "PF" | "PJ")}>
-              <option value="PF">Pessoa física</option>
-              <option value="PJ">Pessoa jurídica</option>
+            "Tipo de imóvel",
+            <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
+              {CLIENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>,
             "clientType",
           )}
@@ -379,8 +356,8 @@ export default function QuoteForm({ initialDeal, companyName, logoUrl, obraNumer
       {presenting && (
         <PresentationView
           deal={{ ...deal, valorFinal: calc.valorFinal }}
-          companyName={companyName}
-          logoUrl={logoUrl}
+          companyName={company.companyName || ""}
+          logoUrl={company.logoUrl}
           onClose={() => setPresenting(false)}
         />
       )}

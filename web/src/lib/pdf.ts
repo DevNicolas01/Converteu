@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { calcDeal, formatBRL, formatDateBR, type Deal } from "./calc";
+import type { CompanyProfile } from "./db";
 
 function getImageDimensions(src: string): Promise<{ width: number; height: number; img: HTMLImageElement } | null> {
   return new Promise((resolve) => {
@@ -18,11 +19,12 @@ function fitBox(natW: number, natH: number, maxW: number, maxH: number) {
 
 function buildProposalDoc(
   deal: Deal,
-  companyName: string,
+  company: CompanyProfile,
   obraNumero: number,
   imgInfo: { width: number; height: number; img: HTMLImageElement } | null,
   includeCosts: boolean,
 ) {
+  const companyName = company.companyName || "Sua empresa";
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const calc = calcDeal(deal);
   const pageW = 210;
@@ -41,9 +43,12 @@ function buildProposalDoc(
   doc.setTextColor(20, 32, 58);
   doc.text(companyName, textX, 18);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(103, 114, 138);
-  doc.text(includeCosts ? "Orçamento interno" : "Orçamento de serviço", textX, 24);
+  const companyLine = [company.cnpj && `CNPJ ${company.cnpj}`, company.endereco, company.telefone, company.email]
+    .filter(Boolean)
+    .join("  •  ");
+  doc.text(companyLine || (includeCosts ? "Orçamento interno" : "Orçamento de serviço"), textX, 24);
 
   doc.setDrawColor(225, 229, 236);
   doc.line(marginX, 30, pageW - marginX, 30);
@@ -76,7 +81,7 @@ function buildProposalDoc(
 
   addSectionTitle("Dados do cliente e da obra");
   addRow("Cliente", deal.clientName || "-");
-  addRow("Tipo de cliente", deal.clientType === "PJ" ? "Pessoa jurídica" : "Pessoa física");
+  addRow("Tipo de imóvel", deal.clientType || "-");
   addRow("Endereço", deal.endereco || "-");
   addRow("Responsável pelo serviço", deal.responsavel || "-");
   addRow("Como o cliente chegou até você", deal.leadSource || "-");
@@ -148,30 +153,24 @@ function buildProposalDoc(
   return { doc, fileName: `orcamento-obra-${obraNumero}-${nomeArquivo || "cliente"}-${sufixo}.pdf` };
 }
 
-async function buildProposalPdf(
-  deal: Deal,
-  companyName: string,
-  logoUrl: string | null | undefined,
-  obraNumero: number,
-  includeCosts: boolean,
-) {
-  const imgInfo = logoUrl ? await getImageDimensions(logoUrl) : null;
-  return buildProposalDoc(deal, companyName || "Sua empresa", obraNumero, imgInfo, includeCosts);
+async function buildProposalPdf(deal: Deal, company: CompanyProfile, obraNumero: number, includeCosts: boolean) {
+  const imgInfo = company.logoUrl ? await getImageDimensions(company.logoUrl) : null;
+  return buildProposalDoc(deal, company, obraNumero, imgInfo, includeCosts);
 }
 
 /** PDF limpo pra mandar ao cliente — sem detalhamento de custos nem margem. */
-export async function downloadClientPdf(deal: Deal, companyName: string, logoUrl: string | null | undefined, obraNumero: number) {
-  const { doc, fileName } = await buildProposalPdf(deal, companyName, logoUrl, obraNumero, false);
+export async function downloadClientPdf(deal: Deal, company: CompanyProfile, obraNumero: number) {
+  const { doc, fileName } = await buildProposalPdf(deal, company, obraNumero, false);
   doc.save(fileName);
 }
 
 /** PDF completo, com o detalhamento de custos e margem — só pra uso interno da empresa. */
-export async function downloadInternalPdf(deal: Deal, companyName: string, logoUrl: string | null | undefined, obraNumero: number) {
-  const { doc, fileName } = await buildProposalPdf(deal, companyName, logoUrl, obraNumero, true);
+export async function downloadInternalPdf(deal: Deal, company: CompanyProfile, obraNumero: number) {
+  const { doc, fileName } = await buildProposalPdf(deal, company, obraNumero, true);
   doc.save(fileName);
 }
 
-export async function getProposalPdfBlob(deal: Deal, companyName: string, logoUrl: string | null | undefined, obraNumero: number) {
-  const { doc, fileName } = await buildProposalPdf(deal, companyName, logoUrl, obraNumero, false);
+export async function getProposalPdfBlob(deal: Deal, company: CompanyProfile, obraNumero: number) {
+  const { doc, fileName } = await buildProposalPdf(deal, company, obraNumero, false);
   return { blob: doc.output("blob") as Blob, fileName };
 }

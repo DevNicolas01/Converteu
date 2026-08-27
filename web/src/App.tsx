@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import ClientPage from "./pages/ClientPage";
 import AdminOverviewPage from "./pages/AdminOverviewPage";
 import AdminAccountPage from "./pages/AdminAccountPage";
@@ -36,6 +37,7 @@ function AppRoutes() {
           </Gate>
         }
       />
+      <Route path="/signup" element={<SignupPage />} />
       <Route
         path="/admin"
         element={

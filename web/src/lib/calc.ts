@@ -12,7 +12,7 @@ export interface Deal {
   clientName: string;
   clienteEmail: string;
   clientePhone: string;
-  clientType: "PF" | "PJ";
+  clientType: string;
   leadSource: string;
   /** Qual plataforma de tráfego pago (Google ou Meta) — só quando leadSource === "Tráfego pago". */
   leadSourcePaidChannel: string;
@@ -67,6 +67,8 @@ export const ROLES = [
 
 export const LEAD_SOURCES = ["Google Meu Negócio", "Tráfego pago", "Redes sociais", "Indicação", "Recorrente", "Outro"];
 
+export const CLIENT_TYPES = ["Residência", "Apartamento", "Sala comercial", "Condomínio", "Obra/Construtora", "Outro"];
+
 /** Só relevante quando leadSource === "Tráfego pago" — qual plataforma trouxe o lead. */
 export const PAID_TRAFFIC_CHANNELS = ["Google", "Meta"];
 
@@ -92,7 +94,7 @@ export function emptyDeal(): Deal {
     clientName: "",
     clienteEmail: "",
     clientePhone: "",
-    clientType: "PF",
+    clientType: "Residência",
     leadSource: "Google Meu Negócio",
     leadSourcePaidChannel: "",
     stage: "aberto",

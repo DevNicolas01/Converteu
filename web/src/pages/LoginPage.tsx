@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage({ adminHint = false }: { adminHint?: boolean }) {
@@ -26,14 +27,9 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
       <form className="panel auth-panel" onSubmit={handleSubmit}>
         <h2 className="panel-title">{adminHint ? "Entrar como admin" : "Entrar"}</h2>
         {!adminHint && (
-          <>
-            <p className="panel-help" style={{ marginTop: 0 }}>
-              Acesso por conta — fale com o suporte se ainda não tem um login.
-            </p>
-            <p className="panel-help" style={{ marginTop: 0 }}>
-              +55 (61) 99861-5779 {"<->"} @marketingparalimpeza
-            </p>
-          </>
+          <p className="panel-help" style={{ marginTop: 0 }}>
+            Ainda não tem conta? <Link to="/signup">Criar conta</Link>
+          </p>
         )}
         <div className="field">
           <label htmlFor="login-email">E-mail</label>

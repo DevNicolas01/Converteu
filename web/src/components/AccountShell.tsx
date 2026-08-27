@@ -9,6 +9,7 @@ import {
   saveCompanyProfile,
   uploadCompanyLogo,
   type AccountStatus,
+  type CompanyProfile,
 } from "../lib/db";
 import { useAuth } from "../context/AuthContext";
 import type { Deal } from "../lib/calc";
@@ -25,28 +26,13 @@ type Tab = "calc" | "funil" | "painel";
 export default function AccountShell({ accountId, asAdmin = false }: { accountId: string; asAdmin?: boolean }) {
   const { logout } = useAuth();
   const [status, setStatus] = useState<AccountStatus | null>(null);
-  const [company, setCompany] = useState<{ companyName?: string; logoUrl?: string | null } | null>(null);
+  const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loadErr, setLoadErr] = useState("");
+  const [startingCheckout, setStartingCheckout] = useState(false);
   const [tab, setTab] = useState<Tab>("calc");
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
-  const [hintDismissed, setHintDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(`converteu-hint-dismissed-${accountId}`) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  function dismissHint() {
-    setHintDismissed(true);
-    try {
-      localStorage.setItem(`converteu-hint-dismissed-${accountId}`, "1");
-    } catch {
-      // ignore
-    }
-  }
 
   async function loadAll() {
     const s = await getAccountStatus(accountId);
@@ -95,13 +81,44 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   }
 
   if (!status.isActiveAndValid) {
+    const rawStatus = (status as { status?: string }).status;
+    const needsPayment = rawStatus === "pending_payment" || rawStatus === "payment_failed";
+    const blockedMessage = rawStatus === "pending_payment"
+      ? "Falta confirmar o pagamento pra ativar sua conta."
+      : rawStatus === "payment_failed"
+        ? "A última cobrança não passou. Atualize o pagamento pra continuar usando."
+        : status.isSuspended
+          ? "Conta suspensa. Fale com o suporte para reativar."
+          : "Assinatura vencida. Fale com o suporte para renovar.";
     return (
       <div className="auth-screen">
         <div className="panel auth-panel">
           <h2 className="panel-title">Acesso bloqueado</h2>
-          <p className="panel-help">
-            {status.isSuspended ? "Conta suspensa. Fale com o suporte para reativar." : "Assinatura vencida. Fale com o suporte para renovar."}
-          </p>
+          <p className="panel-help">{blockedMessage}</p>
+          {needsPayment && !asAdmin && (
+            <button
+              className="save-btn"
+              style={{ width: "100%", marginBottom: 8 }}
+              disabled={startingCheckout}
+              onClick={async () => {
+                setStartingCheckout(true);
+                try {
+                  const res = await fetch("/api/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ accountId, email: status.email }),
+                  });
+                  const { url } = await res.json();
+                  window.location.href = url;
+                } catch {
+                  setStartingCheckout(false);
+                  alert("Não foi possível abrir o pagamento. Tente de novo.");
+                }
+              }}
+            >
+              {startingCheckout ? "Abrindo pagamento..." : "Assinar agora"}
+            </button>
+          )}
           {!asAdmin && (
             <button className="save-btn" style={{ width: "100%" }} onClick={() => logout()}>
               Sair
@@ -112,8 +129,8 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     );
   }
 
-  async function handleSaveCompany(name: string, file: File | null) {
-    await saveCompanyProfile(accountId, name);
+  async function handleSaveCompany(data: Omit<CompanyProfile, "logoUrl">, file: File | null) {
+    await saveCompanyProfile(accountId, data);
     if (file) await uploadCompanyLogo(accountId, file);
     const profile = await getCompanyProfile(accountId);
     setCompany(profile);
@@ -121,7 +138,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   }
 
   if (company && !company.companyName) {
-    return <CompanySetupForm initialName="" onSave={handleSaveCompany} />;
+    return <CompanySetupForm initial={{}} onSave={handleSaveCompany} />;
   }
 
   async function handleSaveDeal(deal: Deal) {
@@ -184,7 +201,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         <div className="nav-area">
           <nav className="tabnav" aria-label="Seções do painel">
             <button className={`tabbtn${tab === "calc" ? " active" : ""}`} aria-current={tab === "calc" ? "page" : undefined} onClick={() => setTab("calc")}>
-              Novo orçamento
+              Calculadora
             </button>
             <button className={`tabbtn${tab === "funil" ? " active" : ""}`} aria-current={tab === "funil" ? "page" : undefined} onClick={() => setTab("funil")}>
               Propostas
@@ -209,8 +226,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         <Modal onClose={() => setShowCompanyEditor(false)}>
           <CompanySetupForm
             bare
-            initialName={company?.companyName || ""}
-            initialLogoUrl={company?.logoUrl}
+            initial={company || {}}
             onCancel={() => setShowCompanyEditor(false)}
             onSave={handleSaveCompany}
           />
@@ -218,22 +234,11 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
       )}
 
       <main className="main" id="main-content">
-        {tab === "calc" && !company?.logoUrl && !hintDismissed && (
-          <div className="hint-banner">
-            <span>
-              Dica: clique em <strong>Perfil</strong>, no topo, pra colocar o nome e a logo que vão aparecer no PDF dos orçamentos.
-            </span>
-            <button onClick={dismissHint} aria-label="Fechar aviso" title="Fechar">
-              ×
-            </button>
-          </div>
-        )}
         {tab === "calc" && (
           <QuoteForm
             key={editingDeal?.id || "new"}
             initialDeal={editingDeal}
-            companyName={company?.companyName || ""}
-            logoUrl={company?.logoUrl}
+            company={company || {}}
             obraNumero={deals.length + 1}
             onSave={handleSaveDeal}
             onCancelEdit={() => setEditingDeal(null)}
@@ -242,8 +247,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         {tab === "funil" && (
           <ProposalsBoard
             deals={deals}
-            companyName={company?.companyName || ""}
-            logoUrl={company?.logoUrl}
+            company={company || {}}
             onEdit={(deal) => {
               setEditingDeal(deal);
               setTab("calc");

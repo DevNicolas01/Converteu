@@ -4,7 +4,6 @@ import {
   adminListAccounts,
   adminGetDashboardStats,
   adminGetCompanyProfiles,
-  adminCreateAccount,
   adminRenewSubscription,
   adminSetAccountStatus,
   adminDeleteAccount,
@@ -60,12 +59,6 @@ export default function AdminOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [companyName, setCompanyName] = useState("");
-  const [email, setEmail] = useState("");
-  const [months, setMonths] = useState(1);
-  const [createMsg, setCreateMsg] = useState("");
-  const [createError, setCreateError] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [renewMonths, setRenewMonths] = useState<Record<string, number>>({});
@@ -143,32 +136,6 @@ export default function AdminOverviewPage() {
     loadAccounts();
     loadAdmins();
   }, []);
-
-  async function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    if (!companyName.trim() || !email.trim()) {
-      setCreateError(true);
-      setCreateMsg("Preencha nome e e-mail.");
-      return;
-    }
-    setCreating(true);
-    setCreateMsg("Criando...");
-    setCreateError(false);
-    try {
-      await adminCreateAccount({ companyName: companyName.trim(), email: email.trim(), subscriptionMonths: months });
-      setCreateMsg("Conta criada! O cliente vai receber um e-mail pra definir a senha.");
-      setCompanyName("");
-      setEmail("");
-      setMonths(1);
-      await loadAccounts();
-    } catch (e) {
-      const err = e as { code?: string; message?: string };
-      setCreateError(true);
-      setCreateMsg("Não foi possível criar a conta: " + (err.code || err.message || String(e)));
-    } finally {
-      setCreating(false);
-    }
-  }
 
   async function handleRenew(accountId: string, months: number) {
     try {
@@ -275,40 +242,6 @@ export default function AdminOverviewPage() {
         <p className="microlabel" style={{ margin: "0 16px 8px" }}>
           Propostas com origem "Tráfego pago" que o cliente marcou como Google ou Meta — mostra se os anúncios estão convertendo.
         </p>
-
-        <section className="panel" style={{ margin: 16, marginBottom: 0 }}>
-          <h2 className="panel-title">Criar nova conta</h2>
-          <p className="panel-help" style={{ marginTop: 0 }}>
-            O cliente recebe um e-mail do Firebase pra definir a própria senha.
-          </p>
-          <form onSubmit={handleCreate} className="field-grid">
-            <div className="field">
-              <label htmlFor="new-company-name">Nome da empresa</label>
-              <input id="new-company-name" className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="new-company-email">E-mail</label>
-              <input id="new-company-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="new-company-months">Meses de assinatura</label>
-              <input
-                id="new-company-months"
-                className="input"
-                type="number"
-                min={1}
-                value={months}
-                onChange={(e) => setMonths(Number(e.target.value) || 1)}
-              />
-            </div>
-          </form>
-          <button className="save-btn" style={{ marginTop: 8 }} onClick={handleCreate} disabled={creating}>
-            Criar conta
-          </button>
-          <p className={`save-msg${createError ? " is-error" : ""}`} role="status" aria-live="polite">
-            {createMsg}
-          </p>
-        </section>
 
         <section className="panel" style={{ margin: 16, marginBottom: 0 }}>
           <h2 className="panel-title">Administradores</h2>

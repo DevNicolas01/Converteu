@@ -4,11 +4,11 @@ import { buildWhatsAppShareLink } from "../lib/db";
 import { MESSAGE_TEMPLATES } from "../lib/templates";
 import { downloadClientPdf } from "../lib/pdf";
 import PresentationView from "./PresentationView";
+import type { CompanyProfile } from "../lib/db";
 
 interface Props {
   deals: Deal[];
-  companyName: string;
-  logoUrl?: string | null;
+  company: CompanyProfile;
   onEdit: (deal: Deal) => void;
   onDelete: (id: string) => void;
   onChangeStage: (deal: Deal, stage: string) => void;
@@ -21,10 +21,11 @@ function daysSince(iso: string | null | undefined) {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
-function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage, onSetFollowUpDate }: Props & { deal: Deal }) {
+function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate }: Props & { deal: Deal }) {
   const [presenting, setPresenting] = useState(false);
   const [templateId, setTemplateId] = useState(MESSAGE_TEMPLATES[0].id);
   const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) || MESSAGE_TEMPLATES[0];
+  const companyName = company.companyName || "";
   const message = template.build(deal, companyName, num(deal.valorFinal));
   const followUpId = useId();
   const templateSelectId = useId();
@@ -37,7 +38,7 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
       alert("Cadastre o WhatsApp do cliente no orçamento primeiro.");
       return;
     }
-    await downloadClientPdf(deal, companyName, logoUrl, deal.obraNumero || 1);
+    await downloadClientPdf(deal, company, deal.obraNumero || 1);
     window.open(buildWhatsAppShareLink(deal.clientePhone, `${message}\n\n(vou te mandar o PDF em seguida)`), "_blank");
   }
 
@@ -46,7 +47,7 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
       alert("Cadastre o e-mail do cliente no orçamento primeiro.");
       return;
     }
-    await downloadClientPdf(deal, companyName, logoUrl, deal.obraNumero || 1);
+    await downloadClientPdf(deal, company, deal.obraNumero || 1);
     const subject = encodeURIComponent(`Orçamento — ${companyName}`);
     const body = encodeURIComponent(message + "\n\n(PDF baixado — anexe antes de enviar)");
     window.location.href = `mailto:${deal.clienteEmail}?subject=${subject}&body=${body}`;
@@ -116,7 +117,7 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
           <button type="button" className="icon-action-btn" onClick={sendEmail}>
             E-mail
           </button>
-          <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, companyName, logoUrl, deal.obraNumero || 1)}>
+          <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, company, deal.obraNumero || 1)}>
             PDF
           </button>
           <button
@@ -131,7 +132,7 @@ function DealCard({ deal, companyName, logoUrl, onEdit, onDelete, onChangeStage,
       </div>
 
       {presenting && (
-        <PresentationView deal={deal} companyName={companyName} logoUrl={logoUrl} onClose={() => setPresenting(false)} />
+        <PresentationView deal={deal} companyName={companyName} logoUrl={company.logoUrl} onClose={() => setPresenting(false)} />
       )}
     </div>
   );
