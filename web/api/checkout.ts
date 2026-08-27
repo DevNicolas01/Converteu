@@ -1,6 +1,22 @@
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { PLANS, PLAN_PRICES, type PlanId, type BillingCycle } from "../src/lib/calc";
+
+type PlanId = "start" | "cresce" | "sem_limite";
+type BillingCycle = "mensal" | "anual";
+
+// Precisa ficar em sincronia com PLANS/PLAN_PRICES em src/lib/calc.ts -- o Vercel não
+// empacota imports de fora da pasta api/, cada function é transpilada isoladamente.
+const PLAN_LABELS: Record<PlanId, string> = {
+  start: "Start",
+  cresce: "Cresce",
+  sem_limite: "Sem Limite",
+};
+
+const PLAN_PRICES: Record<PlanId, Record<BillingCycle, number>> = {
+  start: { mensal: 14.9, anual: 149 },
+  cresce: { mensal: 24.9, anual: 249 },
+  sem_limite: { mensal: 39.9, anual: 399 },
+};
 
 function getDb(): Firestore {
   if (!getApps().length) {
@@ -50,20 +66,21 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const { accountId, email } = body;
-  const plan = body.plan as PlanId | undefined;
+  const rawPlan = body.plan;
   const billingCycle = (body.billingCycle as BillingCycle | undefined) || "mensal";
   if (!accountId || !email) {
     return new Response("accountId e email são obrigatórios", { status: 400 });
   }
-  if (!plan || plan === "teste" || !PLAN_PRICES[plan]) {
+  if (!rawPlan || !(rawPlan in PLAN_PRICES)) {
     return new Response("Plano inválido.", { status: 400 });
   }
+  const plan = rawPlan as PlanId;
   if (billingCycle !== "mensal" && billingCycle !== "anual") {
     return new Response("Ciclo de cobrança inválido.", { status: 400 });
   }
 
   const value = PLAN_PRICES[plan][billingCycle];
-  const planLabel = PLANS.find((p) => p.id === plan)?.label || plan;
+  const planLabel = PLAN_LABELS[plan] || plan;
 
   try {
     const db = getDb();
