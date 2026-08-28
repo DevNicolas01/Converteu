@@ -1,21 +1,8 @@
 import { useMemo, useState } from "react";
 import { formatBRL, num, isThisMonth, calcDeal, STAGES, type Deal } from "../lib/calc";
+import { Tile, BarRow, CircleChart, LineChart } from "./charts";
 
 const CAT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)", "var(--cat-6)"];
-
-function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="metric-card">
-      <p className="metric-label">{label}</p>
-      <p className="metric-value">{value}</p>
-      {hint && (
-        <p className="microlabel" style={{ marginTop: 4 }}>
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
 
 const STAGE_COLORS: Record<string, string> = {
   aberto: "var(--n-600)",
@@ -23,101 +10,6 @@ const STAGE_COLORS: Record<string, string> = {
   fechado: "var(--emerald-400)",
   perdido: "var(--red-400)",
 };
-
-function BarRow({ label, metric, max, color, display }: { label: string; metric: number; max: number; color: string; display: string }) {
-  const pct = max > 0 ? Math.max((metric / max) * 100, metric > 0 ? 3 : 0) : 0;
-  return (
-    <div className="funnel-row">
-      <span className="funnel-row-label">{label}</span>
-      <div className="funnel-row-track">
-        <div className="funnel-row-fill" style={{ width: `${pct}%`, background: color }} />
-      </div>
-      <span className="funnel-row-value">{display}</span>
-    </div>
-  );
-}
-
-function CircleChart({ data, hole = 0 }: { data: { label: string; value: number; color: string }[]; hole?: number }) {
-  const size = 150;
-  const r = size / 2;
-  const total = data.reduce((s, d) => s + d.value, 0);
-  const visible = data.filter((d) => d.value > 0);
-
-  if (total === 0) return <p className="chart-empty">Sem dados ainda.</p>;
-
-  // Uma unica fatia com 100% vira um circulo cheio -- um arco de 360 graus degenera
-  // (ponto inicial == ponto final) e o SVG nao desenha nada.
-  const isSingleSlice = visible.length === 1;
-
-  let angle = -90;
-  const slices = visible.map((d) => {
-    const frac = d.value / total;
-    const start = angle;
-    const end = angle + frac * 360;
-    angle = end;
-    const largeArc = end - start > 180 ? 1 : 0;
-    const toXY = (deg: number): [number, number] => {
-      const rad = (deg * Math.PI) / 180;
-      return [r + r * Math.cos(rad), r + r * Math.sin(rad)];
-    };
-    const [x1, y1] = toXY(start);
-    const [x2, y2] = toXY(end);
-    return { ...d, frac, path: `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z` };
-  });
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label="Gráfico de distribuição">
-        {isSingleSlice ? (
-          <circle cx={r} cy={r} r={r} fill={slices[0].color} />
-        ) : (
-          slices.map((s) => <path key={s.label} d={s.path} fill={s.color} stroke="var(--n-900-40)" strokeWidth={2} />)
-        )}
-        {hole > 0 && <circle cx={r} cy={r} r={r * hole} fill="var(--n-900-40)" />}
-      </svg>
-      <div className="legend" style={{ flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
-        {slices.map((s) => (
-          <span className="legend-item" key={s.label}>
-            <span className="legend-swatch" style={{ background: s.color }} />
-            {s.label} — {s.value} ({(s.frac * 100).toFixed(0)}%)
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LineChart({ points }: { points: { label: string; value: number }[] }) {
-  const width = 640;
-  const height = 170;
-  const pad = { top: 20, right: 16, bottom: 22, left: 16 };
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const max = Math.max(1, ...points.map((p) => p.value));
-  const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
-  const coords = points.map((p, i) => ({ ...p, x: pad.left + i * stepX, y: pad.top + innerH - (p.value / max) * innerH }));
-  const linePath = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`).join(" ");
-  const areaPath = `${linePath} L ${coords[coords.length - 1]?.x ?? 0} ${pad.top + innerH} L ${coords[0]?.x ?? 0} ${pad.top + innerH} Z`;
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-label="Faturamento nos últimos meses">
-      <line x1={pad.left} y1={pad.top + innerH} x2={width - pad.right} y2={pad.top + innerH} stroke="var(--n-800)" strokeWidth={1} />
-      {coords.length > 1 && <path d={areaPath} fill="var(--amber-400)" opacity={0.1} />}
-      {coords.length > 1 && <path d={linePath} fill="none" stroke="var(--amber-400)" strokeWidth={2} />}
-      {coords.map((c) => (
-        <g key={c.label}>
-          <circle cx={c.x} cy={c.y} r={4} fill="var(--amber-400)" stroke="var(--n-900-40)" strokeWidth={1.5} />
-          <text x={c.x} y={height - 6} textAnchor="middle" fontSize={9} fill="var(--n-500)">
-            {c.label}
-          </text>
-          <text x={c.x} y={c.y - 9} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--n-300)">
-            {formatBRL(c.value).replace("R$", "").trim()}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
 
 export default function SalesOverview({ deals }: { deals: Deal[] }) {
   const [period, setPeriod] = useState<"mes" | "tudo">("mes");

@@ -115,6 +115,152 @@
   }
 }
 
+.hero-mrr {
+  margin: 16px;
+  padding: 24px 28px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--amber-500), var(--amber-400));
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.hero-mrr-label {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hero-mrr-value {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.1;
+}
+
+.hero-mrr-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-mrr-plan {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.hero-mrr-plan-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.attention-panel {
+  border-color: var(--red-400);
+}
+
+.attention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--red-400);
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--n-200);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.attention-chip:hover {
+  background: rgba(220, 38, 38, 0.16);
+}
+
+.client-rows {
+  border: 1px solid var(--n-800);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.client-row {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--n-800);
+}
+
+.client-row:last-child {
+  border-bottom: none;
+}
+
+.client-row.urgent {
+  border-left: 4px solid var(--red-400);
+  background: rgba(220, 38, 38, 0.03);
+}
+
+.client-row-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.client-row-id {
+  flex: 2 1 200px;
+  min-width: 180px;
+}
+
+.client-row-plan {
+  flex: 1 1 130px;
+  min-width: 120px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--n-300);
+}
+
+.client-row-quota {
+  flex: 1 1 150px;
+  min-width: 140px;
+}
+
+.client-row-money {
+  flex: 0 1 110px;
+  text-align: right;
+}
+
+.client-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.client-row-expanded {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--n-800);
+}
+
+@media (max-width: 720px) {
+  .client-row-money {
+    text-align: left;
+  }
+
+  .client-row-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
 .funnel {
   display: grid;
   gap: 10px;

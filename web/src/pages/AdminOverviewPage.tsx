@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PLANS, PLAN_PRICES, planLimit, type PlanId } from "../lib/calc";
+import { Tile, CircleChart } from "../components/charts";
 import {
   adminListAccounts,
   adminGetDashboardStats,
@@ -71,8 +72,7 @@ const STATUS_META: Record<StatusKey, { label: string; color: string; bg: string 
 };
 
 function StatusBadge({ status, isExpired }: { status: string | undefined; isExpired: boolean }) {
-  const key = statusKey(status, isExpired);
-  const meta = STATUS_META[key];
+  const meta = STATUS_META[statusKey(status, isExpired)];
   return (
     <span
       style={{
@@ -98,8 +98,22 @@ function monthlyValue(plan: string | undefined, billingCycle: string | undefined
   return billingCycle === "anual" ? price / 12 : price;
 }
 
+const PLAN_COLORS: Record<string, string> = {
+  teste: "var(--n-600)",
+  start: "var(--cat-1)",
+  cresce: "var(--cat-3)",
+  sem_limite: "var(--cat-5)",
+};
+
+function isAccountUrgent(acc: AdminAccount, isExpired: boolean, diffDays: number | null): boolean {
+  return acc.status === "payment_failed" || acc.status === "suspended" || isExpired || (diffDays !== null && diffDays <= 3);
+}
+
+type Tab = "geral" | "clientes" | "admins";
+
 export default function AdminOverviewPage() {
   const { logout } = useAuth();
+  const [tab, setTab] = useState<Tab>("geral");
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [stats, setStats] = useState<Record<string, AdminAccountStats>>({});
   const [profiles, setProfiles] = useState<Record<string, AdminCompanyProfile>>({});
@@ -220,6 +234,15 @@ export default function AdminOverviewPage() {
     }
   }
 
+  function displayNameOf(acc: AdminAccount) {
+    return profiles[acc.id]?.companyName || acc.companyName || "Sem nome";
+  }
+
+  function jumpToClient(acc: AdminAccount) {
+    setSearch(displayNameOf(acc));
+    setTab("clientes");
+  }
+
   const totals = Object.values(stats).reduce(
     (acc, s) => ({
       totalPropostas: acc.totalPropostas + s.totalPropostas,
@@ -234,6 +257,7 @@ export default function AdminOverviewPage() {
   );
 
   const mrr = accounts.reduce((sum, acc) => (acc.status === "active" ? sum + monthlyValue(acc.plan, acc.billingCycle) : sum), 0);
+  const contasAtivas = accounts.filter((a) => a.status === "active").length;
 
   const planCounts = useMemo(() => {
     const counts: Record<string, number> = { sem_plano: 0 };
@@ -245,12 +269,23 @@ export default function AdminOverviewPage() {
     return counts;
   }, [accounts]);
 
+  const attentionList = useMemo(() => {
+    return accounts
+      .map((acc) => {
+        const expiresAt = toDate(acc.subscriptionExpiresAt);
+        const isExpired = expiresAt ? expiresAt < new Date() : true;
+        const diffDays = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+        return { acc, isExpired, urgent: isAccountUrgent(acc, isExpired, diffDays) };
+      })
+      .filter((x) => x.urgent);
+  }, [accounts]);
+
   const visibleAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return accounts
       .filter((acc) => {
         if (!q) return true;
-        const displayName = profiles[acc.id]?.companyName || acc.companyName || "";
+        const displayName = displayNameOf(acc);
         return displayName.toLowerCase().includes(q) || (acc.email || "").toLowerCase().includes(q);
       })
       .filter((acc) => {
@@ -269,10 +304,9 @@ export default function AdminOverviewPage() {
         if (sortBy === "faturado") {
           return (stats[b.id]?.valorTotalFechado ?? 0) - (stats[a.id]?.valorTotalFechado ?? 0);
         }
-        const nameA = profiles[a.id]?.companyName || a.companyName || "";
-        const nameB = profiles[b.id]?.companyName || b.companyName || "";
-        return nameA.localeCompare(nameB);
+        return displayNameOf(a).localeCompare(displayNameOf(b));
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts, profiles, search, statusFilter, planFilter, sortBy, stats]);
 
   return (
@@ -293,6 +327,17 @@ export default function AdminOverviewPage() {
           </div>
         </div>
         <div className="nav-area">
+          <nav className="tabnav" aria-label="Seções do admin">
+            <button type="button" className={`tabbtn${tab === "geral" ? " active" : ""}`} onClick={() => setTab("geral")}>
+              Visão geral
+            </button>
+            <button type="button" className={`tabbtn${tab === "clientes" ? " active" : ""}`} onClick={() => setTab("clientes")}>
+              Clientes
+            </button>
+            <button type="button" className={`tabbtn${tab === "admins" ? " active" : ""}`} onClick={() => setTab("admins")}>
+              Administradores
+            </button>
+          </nav>
           <ThemeToggle />
           <button className="theme-toggle" title="Sair" aria-label="Sair" onClick={() => logout()}>
             <LogoutIcon />
@@ -301,202 +346,201 @@ export default function AdminOverviewPage() {
       </header>
 
       <main className="main" id="main-content">
-        <p className="eyebrow" style={{ margin: "16px 16px 8px" }}>
-          Assinaturas
-        </p>
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, margin: "0 16px 16px" }}>
-          <div className="metric-card">
-            <p className="metric-label">MRR (receita mensal recorrente)</p>
-            <p className="metric-value">{formatBRL(mrr)}</p>
-            <p className="microlabel" style={{ marginTop: 4 }}>
-              só contas ativas, planos pagos normalizados por mês
-            </p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-label">Contas</p>
-            <p className="metric-value">{accounts.length}</p>
-          </div>
-          {PLANS.map((p) => (
-            <div className="metric-card" key={p.id}>
-              <p className="metric-label">{p.label}</p>
-              <p className="metric-value">{planCounts[p.id] ?? 0}</p>
-            </div>
-          ))}
-        </section>
-
-        <p className="eyebrow" style={{ margin: "0 16px 8px" }}>
-          Atividade dos clientes
-        </p>
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, margin: 16, marginBottom: 0 }}>
-          <div className="metric-card">
-            <p className="metric-label">Propostas (todas as contas)</p>
-            <p className="metric-value">{totals.totalPropostas}</p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-label">Faturado (fechado)</p>
-            <p className="metric-value">{formatBRL(totals.valorTotalFechado)}</p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-label">Em aberto</p>
-            <p className="metric-value">{formatBRL(totals.valorEmAberto)}</p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-label">Tráfego pago Google (fechados)</p>
-            <p className="metric-value">
-              {totals.googleTotal} <span style={{ fontSize: 13, fontWeight: 400 }}>({totals.googleFechados} fechados)</span>
-            </p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-label">Tráfego pago Meta (fechados)</p>
-            <p className="metric-value">
-              {totals.metaTotal} <span style={{ fontSize: 13, fontWeight: 400 }}>({totals.metaFechados} fechados)</span>
-            </p>
-          </div>
-        </section>
-        <p className="microlabel" style={{ margin: "0 16px 8px" }}>
-          Propostas com origem "Tráfego pago" que o cliente marcou como Google ou Meta — mostra se os anúncios estão convertendo.
-        </p>
-
-        <section className="panel" style={{ margin: 16, marginBottom: 0 }}>
-          <h2 className="panel-title">Administradores</h2>
-          <p className="panel-help" style={{ marginTop: 0 }}>
-            Pessoas com acesso total ao painel admin. A pessoa recebe um e-mail pra definir a própria senha.
+        {loading && <p style={{ margin: 16 }}>Carregando...</p>}
+        {loadError && (
+          <p className="save-msg is-error" style={{ margin: 16 }}>
+            {loadError}
           </p>
-          <form onSubmit={handleAddAdmin} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
-              <label htmlFor="new-admin-email">E-mail do novo admin</label>
-              <input id="new-admin-email" className="input" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
-            </div>
-            <button className="save-btn" type="submit" disabled={addingAdmin}>
-              Adicionar admin
-            </button>
-          </form>
-          <p className={`save-msg${adminMsgError ? " is-error" : ""}`} role="status" aria-live="polite">
-            {adminMsg}
-          </p>
-          {admins.length > 0 && (
-            <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none" }}>
-              {admins.map((a) => (
-                <li key={a.uid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--n-800)" }}>
-                  <span>{a.email || a.uid}</span>
-                  <button className="link-btn" onClick={() => handleRemoveAdmin(a.uid)} aria-label={`Remover admin ${a.email || a.uid}`}>
-                    remover
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        )}
 
-        <section className="panel" style={{ margin: 16 }}>
-          <h2 className="panel-title">Clientes</h2>
-          <div className="field-grid" style={{ marginBottom: 16 }}>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="account-search" className="microlabel">
-                Buscar cliente
-              </label>
-              <input
-                id="account-search"
-                className="input"
-                placeholder="Buscar por empresa ou e-mail..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="account-status-filter" className="microlabel">
-                Status
-              </label>
-              <select id="account-status-filter" className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
-                <option value="todos">Todos</option>
-                <option value="ativo">Ativo</option>
-                <option value="pendente">Aguardando pagamento</option>
-                <option value="falhou">Pagamento falhou</option>
-                <option value="suspenso">Suspenso</option>
-                <option value="vencido">Vencido</option>
-              </select>
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="account-plan-filter" className="microlabel">
-                Plano
-              </label>
-              <select id="account-plan-filter" className="input" value={planFilter} onChange={(e) => setPlanFilter(e.target.value)}>
-                <option value="todos">Todos</option>
+        {!loading && !loadError && tab === "geral" && (
+          <>
+            <div className="hero-mrr">
+              <div>
+                <p className="hero-mrr-label">Receita mensal recorrente (MRR)</p>
+                <p className="hero-mrr-value">{formatBRL(mrr)}</p>
+                <p className="microlabel" style={{ color: "inherit", opacity: 0.85 }}>
+                  {contasAtivas} conta(s) ativa(s) de {accounts.length} no total
+                </p>
+              </div>
+              <div className="hero-mrr-plans">
                 {PLANS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
+                  <div key={p.id} className="hero-mrr-plan">
+                    <span className="hero-mrr-plan-dot" style={{ background: PLAN_COLORS[p.id] }} />
+                    {p.label}: <strong>{planCounts[p.id] ?? 0}</strong>
+                  </div>
                 ))}
-                <option value="sem_plano">Sem plano</option>
-              </select>
+              </div>
             </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="account-sort" className="microlabel">
-                Ordenar por
-              </label>
-              <select id="account-sort" className="input" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
-                <option value="nome">Nome (A-Z)</option>
-                <option value="vencimento">Vencimento mais próximo</option>
-                <option value="faturado">Mais faturado</option>
-              </select>
+
+            {attentionList.length > 0 && (
+              <section className="panel attention-panel" style={{ margin: 16, marginBottom: 0 }}>
+                <h2 className="panel-title" style={{ color: "var(--red-400)" }}>
+                  {attentionList.length} conta(s) precisam de atenção
+                </h2>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {attentionList.map(({ acc, isExpired }) => (
+                    <button key={acc.id} type="button" className="attention-chip" onClick={() => jumpToClient(acc)}>
+                      {displayNameOf(acc)}
+                      <StatusBadge status={acc.status} isExpired={isExpired} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <div className="chart-grid" style={{ margin: 16 }}>
+              <div className="chart-card">
+                <p className="chart-title">Distribuição de planos</p>
+                <CircleChart hole={0.55} data={PLANS.map((p) => ({ label: p.label, value: planCounts[p.id] ?? 0, color: PLAN_COLORS[p.id] }))} />
+              </div>
+              <div className="chart-card" style={{ gridColumn: "span 2" }}>
+                <p className="chart-title">Atividade dos clientes (todas as contas)</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+                  <Tile label="Propostas" value={String(totals.totalPropostas)} />
+                  <Tile label="Faturado (fechado)" value={formatBRL(totals.valorTotalFechado)} />
+                  <Tile label="Em aberto" value={formatBRL(totals.valorEmAberto)} />
+                  <Tile label="Tráfego pago Google" value={`${totals.googleTotal}`} hint={`${totals.googleFechados} fechados`} />
+                  <Tile label="Tráfego pago Meta" value={`${totals.metaTotal}`} hint={`${totals.metaFechados} fechados`} />
+                </div>
+              </div>
             </div>
-          </div>
-          {loading && <p>Carregando...</p>}
-          {loadError && <p className="save-msg is-error">{loadError}</p>}
-          {!loading && !loadError && (
-            <div className="admin-accounts-grid">
+          </>
+        )}
+
+        {!loading && !loadError && tab === "admins" && (
+          <section className="panel" style={{ margin: 16 }}>
+            <h2 className="panel-title">Administradores</h2>
+            <p className="panel-help" style={{ marginTop: 0 }}>
+              Pessoas com acesso total ao painel admin. A pessoa recebe um e-mail pra definir a própria senha.
+            </p>
+            <form onSubmit={handleAddAdmin} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
+                <label htmlFor="new-admin-email">E-mail do novo admin</label>
+                <input id="new-admin-email" className="input" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
+              </div>
+              <button className="save-btn" type="submit" disabled={addingAdmin}>
+                Adicionar admin
+              </button>
+            </form>
+            <p className={`save-msg${adminMsgError ? " is-error" : ""}`} role="status" aria-live="polite">
+              {adminMsg}
+            </p>
+            {admins.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none" }}>
+                {admins.map((a) => (
+                  <li key={a.uid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderTop: "1px solid var(--n-800)" }}>
+                    <span>{a.email || a.uid}</span>
+                    <button className="link-btn" onClick={() => handleRemoveAdmin(a.uid)} aria-label={`Remover admin ${a.email || a.uid}`}>
+                      remover
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {!loading && !loadError && tab === "clientes" && (
+          <section className="panel" style={{ margin: 16 }}>
+            <h2 className="panel-title">Clientes</h2>
+            <div className="field-grid" style={{ marginBottom: 16 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="account-search" className="microlabel">
+                  Buscar cliente
+                </label>
+                <input
+                  id="account-search"
+                  className="input"
+                  placeholder="Buscar por empresa ou e-mail..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="account-status-filter" className="microlabel">
+                  Status
+                </label>
+                <select id="account-status-filter" className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+                  <option value="todos">Todos</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="pendente">Aguardando pagamento</option>
+                  <option value="falhou">Pagamento falhou</option>
+                  <option value="suspenso">Suspenso</option>
+                  <option value="vencido">Vencido</option>
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="account-plan-filter" className="microlabel">
+                  Plano
+                </label>
+                <select id="account-plan-filter" className="input" value={planFilter} onChange={(e) => setPlanFilter(e.target.value)}>
+                  <option value="todos">Todos</option>
+                  {PLANS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                  <option value="sem_plano">Sem plano</option>
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="account-sort" className="microlabel">
+                  Ordenar por
+                </label>
+                <select id="account-sort" className="input" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+                  <option value="nome">Nome (A-Z)</option>
+                  <option value="vencimento">Vencimento mais próximo</option>
+                  <option value="faturado">Mais faturado</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="client-rows">
               {accounts.length === 0 && <p>Nenhuma conta ainda.</p>}
               {accounts.length > 0 && visibleAccounts.length === 0 && <p>Nenhuma conta bate com esse filtro.</p>}
               {visibleAccounts.map((acc) => {
-                  const s = stats[acc.id];
-                  const profile = profiles[acc.id];
-                  const displayName = profile?.companyName || acc.companyName;
-                  const expiresAt = toDate(acc.subscriptionExpiresAt);
-                  const isExpired = expiresAt ? expiresAt < new Date() : true;
-                  const createdAt = toDate(acc.createdAt);
-                  const isExpanded = expandedId === acc.id;
-                  const diffDays = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-                  const isUrgent = acc.status === "payment_failed" || acc.status === "suspended" || isExpired || (diffDays !== null && diffDays <= 3);
-                  const limit = planLimit(acc.plan);
-                  const used = s?.orcamentosEsteMes ?? 0;
-                  return (
-                    <div className="account-card" key={acc.id} style={isUrgent ? { borderLeft: "4px solid var(--red-400)" } : undefined}>
+                const s = stats[acc.id];
+                const profile = profiles[acc.id];
+                const displayName = displayNameOf(acc);
+                const expiresAt = toDate(acc.subscriptionExpiresAt);
+                const isExpired = expiresAt ? expiresAt < new Date() : true;
+                const createdAt = toDate(acc.createdAt);
+                const isExpanded = expandedId === acc.id;
+                const diffDays = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                const urgent = isAccountUrgent(acc, isExpired, diffDays);
+                const limit = planLimit(acc.plan);
+                const used = s?.orcamentosEsteMes ?? 0;
+                return (
+                  <div className={`client-row${urgent ? " urgent" : ""}`} key={acc.id}>
+                    <div className="client-row-main">
                       {profile?.logoUrl ? (
-                        <img className="account-logo" src={profile.logoUrl} alt="" style={{ gridArea: "logo" }} />
+                        <img className="account-logo" src={profile.logoUrl} alt="" />
                       ) : (
-                        <div className="account-logo-placeholder" style={{ gridArea: "logo" }}>
-                          {(displayName || "?").slice(0, 2).toUpperCase()}
-                        </div>
+                        <div className="account-logo-placeholder">{(displayName || "?").slice(0, 2).toUpperCase()}</div>
                       )}
-                      <div style={{ gridArea: "name" }}>
+                      <div className="client-row-id">
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <strong>{displayName}</strong>
                           <StatusBadge status={acc.status} isExpired={isExpired} />
                         </div>
-                        <p className="microlabel">
-                          {acc.plan === "teste" ? "Plano gratuito — sem vencimento" : `vence ${formatDate(expiresAt)} (${daysRemainingLabel(expiresAt)})`}
-                          {" · "}
-                          {PLANS.find((p) => p.id === acc.plan)?.label || "Sem plano"}
-                          {acc.billingCycle && acc.plan !== "teste" ? ` (${acc.billingCycle})` : ""}
+                        <p className="microlabel">{acc.email}</p>
+                      </div>
+
+                      <div className="client-row-plan">
+                        <span>{PLANS.find((p) => p.id === acc.plan)?.label || "Sem plano"}</span>
+                        <p className="microlabel" style={{ margin: 0 }}>
+                          {acc.plan === "teste" ? "sem vencimento" : `${daysRemainingLabel(expiresAt)}`}
                         </p>
                       </div>
-                      <div style={{ gridArea: "email" }} className="microlabel">
-                        {acc.email}
-                      </div>
-                      <div className="account-card-meta">
-                        <span>Propostas: {s?.totalPropostas ?? 0}</span>
-                        <span>Abertas: {s?.abertas ?? 0}</span>
-                        <span>Em aberto: {formatBRL(s?.valorEmAberto)}</span>
-                        <span>Fechados: {s?.fechados ?? 0}</span>
-                        <span>Faturado: {formatBRL(s?.valorTotalFechado)}</span>
-                      </div>
-                      <div style={{ gridColumn: "1 / -1", marginTop: 4, maxWidth: 260 }}>
-                        <p className="microlabel" style={{ marginBottom: 2 }}>
-                          Orçamentos este mês: {used}
+
+                      <div className="client-row-quota">
+                        <p className="microlabel" style={{ margin: "0 0 2px" }}>
+                          Orçamentos: {used}
                           {limit != null ? `/${limit}` : " (ilimitado)"}
                         </p>
                         {limit != null && (
-                          <div className="checklist-progress-track" style={{ marginTop: 0 }}>
+                          <div className="checklist-progress-track">
                             <div
                               className="checklist-progress-fill"
                               style={{ width: `${Math.min(100, (used / limit) * 100)}%`, background: used >= limit ? "var(--red-400)" : "var(--amber-400)" }}
@@ -504,37 +548,33 @@ export default function AdminOverviewPage() {
                           </div>
                         )}
                       </div>
-                      <div className="account-actions-row" style={{ gridArea: "actions" }}>
+
+                      <div className="client-row-money">
+                        <p className="microlabel" style={{ margin: 0 }}>
+                          Faturado
+                        </p>
+                        <strong>{formatBRL(s?.valorTotalFechado)}</strong>
+                      </div>
+
+                      <div className="client-row-actions">
                         <Link className="icon-action-btn primary" to={`/admin/contas/${acc.id}`} target="_blank" rel="noopener">
                           Ver como cliente
                         </Link>
-                        <button className="icon-action-btn" onClick={() => setExpandedId(isExpanded ? null : acc.id)}>
-                          {isExpanded ? "Ocultar detalhes ▲" : "Ver detalhes ▼"}
-                        </button>
-                        <span className="renew-inline">
-                          <input
-                            className="input"
-                            type="number"
-                            min={1}
-                            value={renewMonths[acc.id] ?? 1}
-                            onChange={(e) => setRenewMonths((m) => ({ ...m, [acc.id]: Number(e.target.value) || 1 }))}
-                          />
-                          <button className="icon-action-btn" onClick={() => handleRenew(acc.id, renewMonths[acc.id] ?? 1)}>
-                            Renovar mês(es)
-                          </button>
-                        </span>
-                        <button
-                          className={`icon-action-btn${acc.status === "active" ? " danger-filled" : ""}`}
-                          onClick={() => handleToggleStatus(acc.id, acc.status)}
-                        >
-                          {acc.status === "active" ? "Suspender" : "Ativar"}
-                        </button>
-                        <button className="icon-action-btn danger" onClick={() => handleDeleteAccount(acc.id, displayName)}>
-                          Excluir conta
+                        <button className="icon-action-btn" onClick={() => setExpandedId(isExpanded ? null : acc.id)} aria-expanded={isExpanded}>
+                          {isExpanded ? "▲" : "▼"}
                         </button>
                       </div>
-                      {isExpanded && (
-                        <div className="account-card-details">
+                    </div>
+
+                    {isExpanded && (
+                      <div className="client-row-expanded">
+                        <div className="account-card-meta" style={{ marginBottom: 12 }}>
+                          <span>Propostas: {s?.totalPropostas ?? 0}</span>
+                          <span>Abertas: {s?.abertas ?? 0}</span>
+                          <span>Em aberto: {formatBRL(s?.valorEmAberto)}</span>
+                          <span>Fechados: {s?.fechados ?? 0}</span>
+                        </div>
+                        <div className="account-card-details" style={{ marginTop: 0, borderTop: "none", paddingTop: 0 }}>
                           <div>
                             <p className="microlabel">Cliente desde</p>
                             <p>{formatDate(createdAt)}</p>
@@ -572,13 +612,37 @@ export default function AdminOverviewPage() {
                             <p style={{ fontSize: 11, wordBreak: "break-all" }}>{acc.id}</p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div className="account-actions-row" style={{ marginTop: 14 }}>
+                          <span className="renew-inline">
+                            <input
+                              className="input"
+                              type="number"
+                              min={1}
+                              value={renewMonths[acc.id] ?? 1}
+                              onChange={(e) => setRenewMonths((m) => ({ ...m, [acc.id]: Number(e.target.value) || 1 }))}
+                            />
+                            <button className="icon-action-btn" onClick={() => handleRenew(acc.id, renewMonths[acc.id] ?? 1)}>
+                              Renovar mês(es)
+                            </button>
+                          </span>
+                          <button
+                            className={`icon-action-btn${acc.status === "active" ? " danger-filled" : ""}`}
+                            onClick={() => handleToggleStatus(acc.id, acc.status)}
+                          >
+                            {acc.status === "active" ? "Suspender" : "Ativar"}
+                          </button>
+                          <button className="icon-action-btn danger" onClick={() => handleDeleteAccount(acc.id, displayName)}>
+                            Excluir conta
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
