@@ -37,6 +37,8 @@ export interface AdminAccountStats {
   ticketMedio: number;
   taxaConversao: number;
   lastActivity: Date | null;
+  /** Quantos orçamentos essa conta já criou no mês corrente — pra comparar com o limite do plano. */
+  orcamentosEsteMes: number;
   /** Quantas propostas (e quantas fechadas) vieram de tráfego pago do Google. */
   trafegoPagoGoogle: { total: number; fechados: number };
   /** Quantas propostas (e quantas fechadas) vieram de tráfego pago do Meta. */
@@ -175,10 +177,12 @@ export async function adminGetDashboardStats(): Promise<AdminAccountStats[]> {
       let valorTotalFechado = 0;
       let valorEmAberto = 0;
       let lastActivity: Date | null = null;
+      let orcamentosEsteMes = 0;
       let googlePagoTotal = 0;
       let googlePagoFechados = 0;
       let metaPagoTotal = 0;
       let metaPagoFechados = 0;
+      const now = new Date();
       snap.forEach((docSnap) => {
         const data = docSnap.data() as {
           status?: string;
@@ -190,6 +194,10 @@ export async function adminGetDashboardStats(): Promise<AdminAccountStats[]> {
         const valor = Number(data.valor) || 0;
         const isClosed = data.status === CLOSED_STAGE;
         totalPropostas += 1;
+        const criadoEm = data.criadoEm?.toDate?.() || null;
+        if (criadoEm && criadoEm.getMonth() === now.getMonth() && criadoEm.getFullYear() === now.getFullYear()) {
+          orcamentosEsteMes += 1;
+        }
         if (isClosed) {
           fechados += 1;
           valorTotalFechado += valor;
@@ -224,6 +232,7 @@ export async function adminGetDashboardStats(): Promise<AdminAccountStats[]> {
         ticketMedio,
         taxaConversao,
         lastActivity,
+        orcamentosEsteMes,
         trafegoPagoGoogle: { total: googlePagoTotal, fechados: googlePagoFechados },
         trafegoPagoMeta: { total: metaPagoTotal, fechados: metaPagoFechados },
       };
