@@ -21,6 +21,8 @@ export interface Deal {
   closedAt: string | null;
   sentAt: string | null;
   followUpDate: string;
+  /** Só relevante quando stage === "fechado": o cliente já pagou essa proposta? */
+  pago: boolean;
 
   metragem: string;
   dias: string;
@@ -102,6 +104,7 @@ export function emptyDeal(): Deal {
     closedAt: null,
     sentAt: null,
     followUpDate: "",
+    pago: false,
 
     metragem: "",
     dias: "",

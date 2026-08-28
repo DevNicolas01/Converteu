@@ -115,6 +115,164 @@
   }
 }
 
+.funnel {
+  display: grid;
+  gap: 10px;
+}
+
+.funnel-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.funnel-row-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funnel-row-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--n-800);
+  overflow: hidden;
+}
+
+.funnel-row-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s;
+}
+
+.funnel-row-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n-300);
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 560px) {
+  .funnel-row {
+    grid-template-columns: 90px 1fr;
+    grid-template-areas: "label value" "track track";
+  }
+
+  .funnel-row-label {
+    grid-area: label;
+  }
+
+  .funnel-row-value {
+    grid-area: value;
+    text-align: right;
+  }
+
+  .funnel-row-track {
+    grid-area: track;
+  }
+}
+
+.split-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--n-800);
+}
+
+.split-bar-seg {
+  height: 100%;
+}
+
+.material-pct-box {
+  max-width: 300px;
+}
+
+.material-pct-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.material-pct-input .input {
+  flex: 1;
+}
+
+.material-pct-suffix {
+  color: var(--n-500);
+  font-weight: 700;
+}
+
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--n-800);
+  background: var(--n-950);
+  color: var(--n-500);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wizard-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--n-800);
+  color: var(--n-400);
+  font-size: 11px;
+}
+
+.wizard-step.active {
+  border-color: var(--amber-400);
+  color: var(--amber-400);
+}
+
+.wizard-step.active .wizard-step-num {
+  background: var(--amber-400);
+  color: #fff;
+}
+
+.wizard-step.done .wizard-step-num {
+  background: var(--emerald-400);
+  color: #fff;
+}
+
+.wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--n-800);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 560px) {
+  .wizard-step-label {
+    display: none;
+  }
+}
+
 .pres-overlay {
   position: fixed;
   inset: 0;
@@ -360,6 +518,27 @@
   background: var(--amber-400);
   border-color: var(--amber-400);
   color: #fff;
+}
+
+.deal-card.compact {
+  padding-bottom: 10px;
+}
+
+.pago-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n-400);
+  margin: 6px 0;
+  cursor: pointer;
+}
+
+.pago-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--emerald-400);
 }
 
 .deal-card-section {

@@ -13,6 +13,7 @@ interface Props {
   onDelete: (id: string) => void;
   onChangeStage: (deal: Deal, stage: string) => void;
   onSetFollowUpDate: (deal: Deal, date: string) => void;
+  onSetPago: (deal: Deal, pago: boolean) => void;
 }
 
 function daysSince(iso: string | null | undefined) {
@@ -21,8 +22,10 @@ function daysSince(iso: string | null | undefined) {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
-function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate }: Props & { deal: Deal }) {
+function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate, onSetPago }: Props & { deal: Deal }) {
+  const isDecided = deal.stage === "fechado" || deal.stage === "perdido";
   const [presenting, setPresenting] = useState(false);
+  const [expanded, setExpanded] = useState(!isDecided);
   const [templateId, setTemplateId] = useState(MESSAGE_TEMPLATES[0].id);
   const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) || MESSAGE_TEMPLATES[0];
   const companyName = company.companyName || "";
@@ -55,81 +58,104 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
 
   const sentDays = daysSince(deal.sentAt);
   const stageLabel = STAGES.find((s) => s.id === deal.stage)?.label || deal.stage;
+  const placeLabel = deal.obraNome || deal.endereco || "";
 
   return (
-    <div className="deal-card">
+    <div className={`deal-card${isDecided ? " compact" : ""}`}>
       <div className="deal-card-top">
         <button type="button" className="deal-name" onClick={() => onEdit(deal)}>
           {deal.clientName || "Sem nome"}
         </button>
         <span className="deal-value">{formatBRL(deal.valorFinal)}</span>
       </div>
-      {deal.stage === "aguardando" && sentDays !== null && (
-        <p className="deal-meta">Enviada há {sentDays} dia(s)</p>
+      {deal.stage === "aguardando" && sentDays !== null && <p className="deal-meta">Enviada há {sentDays} dia(s)</p>}
+      {isDecided && placeLabel && <p className="deal-meta">{placeLabel}</p>}
+
+      {deal.stage === "fechado" && (
+        <label className="pago-toggle">
+          <input type="checkbox" checked={!!deal.pago} onChange={(e) => onSetPago(deal, e.target.checked)} />
+          {deal.pago ? "Pago" : "Ainda não pago"}
+        </label>
       )}
 
-      <div className="stage-pills" role="group" aria-label={`Status da proposta de ${deal.clientName || "cliente sem nome"}: ${stageLabel}`}>
-        {STAGES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
-            aria-pressed={deal.stage === s.id}
-            onClick={() => onChangeStage(deal, s.id)}
+      {isDecided && (
+        <button type="button" className="link-btn" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? "Recolher ▲" : "Ver detalhes ▾"}
+        </button>
+      )}
+
+      {expanded && (
+        <>
+          <div
+            className="stage-pills"
+            role="group"
+            aria-label={`Status da proposta de ${deal.clientName || "cliente sem nome"}: ${stageLabel}`}
           >
-            {s.label}
-          </button>
-        ))}
-      </div>
+            {STAGES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
+                aria-pressed={deal.stage === s.id}
+                onClick={() => onChangeStage(deal, s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
 
-      <div className="field" style={{ marginBottom: 0, marginTop: 10 }}>
-        <label htmlFor={followUpId} className="microlabel">
-          Próximo follow-up
-        </label>
-        <input
-          id={followUpId}
-          className="input"
-          type="date"
-          value={deal.followUpDate || ""}
-          onChange={(e) => onSetFollowUpDate(deal, e.target.value)}
-        />
-      </div>
+          {!isDecided && (
+            <div className="field" style={{ marginBottom: 0, marginTop: 10 }}>
+              <label htmlFor={followUpId} className="microlabel">
+                Próximo follow-up
+              </label>
+              <input
+                id={followUpId}
+                className="input"
+                type="date"
+                value={deal.followUpDate || ""}
+                onChange={(e) => onSetFollowUpDate(deal, e.target.value)}
+              />
+            </div>
+          )}
 
-      <div className="deal-card-section">
-        <label htmlFor={templateSelectId} className="microlabel">
-          Mensagem
-        </label>
-        <select id={templateSelectId} className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-          {MESSAGE_TEMPLATES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          <div className="deal-card-section">
+            <label htmlFor={templateSelectId} className="microlabel">
+              Mensagem
+            </label>
+            <select id={templateSelectId} className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+              {MESSAGE_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
 
-        <div className="deal-actions">
-          <button type="button" className="icon-action-btn primary" onClick={() => setPresenting(true)}>
-            Apresentar
-          </button>
-          <button type="button" className="icon-action-btn" onClick={sendWhatsApp}>
-            WhatsApp
-          </button>
-          <button type="button" className="icon-action-btn" onClick={sendEmail}>
-            E-mail
-          </button>
-          <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, company, deal.obraNumero || 1)}>
-            PDF
-          </button>
-          <button
-            type="button"
-            className="icon-action-btn danger"
-            onClick={() => onDelete(deal.id!)}
-            aria-label={`Excluir proposta de ${deal.clientName || "cliente sem nome"}`}
-          >
-            Excluir
-          </button>
-        </div>
-      </div>
+            <div className="deal-actions">
+              <button type="button" className="icon-action-btn primary" onClick={() => setPresenting(true)}>
+                Apresentar
+              </button>
+              <button type="button" className="icon-action-btn" onClick={sendWhatsApp}>
+                WhatsApp
+              </button>
+              <button type="button" className="icon-action-btn" onClick={sendEmail}>
+                E-mail
+              </button>
+              <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, company, deal.obraNumero || 1)}>
+                PDF
+              </button>
+              <button
+                type="button"
+                className="icon-action-btn danger"
+                onClick={() => onDelete(deal.id!)}
+                aria-label={`Excluir proposta de ${deal.clientName || "cliente sem nome"}`}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {presenting && (
         <PresentationView deal={deal} companyName={companyName} logoUrl={company.logoUrl} onClose={() => setPresenting(false)} />

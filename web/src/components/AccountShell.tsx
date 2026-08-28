@@ -180,6 +180,12 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     setDeals((ds) => ds.map((d) => (d.id === deal.id ? updated : d)));
   }
 
+  async function handleSetPago(deal: Deal, pago: boolean) {
+    const updated = { ...deal, pago };
+    await updateProposal(accountId, deal.id!, updated);
+    setDeals((ds) => ds.map((d) => (d.id === deal.id ? updated : d)));
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Excluir esta proposta?")) return;
     await deleteProposal(accountId, id);
@@ -268,6 +274,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
             onDelete={handleDelete}
             onChangeStage={handleChangeStage}
             onSetFollowUpDate={handleSetFollowUpDate}
+            onSetPago={handleSetPago}
           />
         )}
         {tab === "painel" && <SalesOverview deals={deals} />}

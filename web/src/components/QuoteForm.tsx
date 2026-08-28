@@ -26,6 +26,14 @@ interface Props {
   onCancelEdit?: () => void;
 }
 
+const STEPS = [
+  { label: "Obra e cliente" },
+  { label: "Equipe" },
+  { label: "Transporte e apoio" },
+  { label: "Materiais e produtos" },
+  { label: "Custos e margem" },
+] as const;
+
 function field(label: string, input: ReactElement<{ id?: string }>, key: string) {
   const id = `qf-${key}`;
   return (
@@ -38,6 +46,7 @@ function field(label: string, input: ReactElement<{ id?: string }>, key: string)
 
 export default function QuoteForm({ initialDeal, company, obraNumero, onSave, onCancelEdit }: Props) {
   const [deal, setDeal] = useState<Deal>(() => initialDeal || emptyDeal());
+  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -45,6 +54,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
   const calc = useMemo(() => calcDeal(deal), [deal]);
   const isEditing = !!deal.id;
+  const lastStep = STEPS.length - 1;
 
   useEffect(() => {
     const termino = computeDataTermino(deal.dataInicio, deal.dias);
@@ -77,11 +87,11 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
     setDeal((d) => ({ ...d, produtos: (d.produtos || []).filter((_, i) => i !== index) }));
   }
 
-
   async function handleSave() {
     if (!deal.clientName.trim()) {
       setSaveError(true);
       setSaveMsg("Preencha o nome do cliente.");
+      setStep(0);
       return;
     }
     setSaving(true);
@@ -90,7 +100,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
       await onSave({ ...deal, valorFinal: calc.valorFinal });
       setSaveError(false);
       setSaveMsg(isEditing ? "Alterações salvas!" : "Orçamento salvo em Propostas!");
-      if (!isEditing) setDeal(emptyDeal());
+      if (!isEditing) {
+        setDeal(emptyDeal());
+        setStep(0);
+      }
     } catch (e) {
       console.error("Falha ao salvar orçamento", e);
       setSaveError(true);
@@ -114,221 +127,281 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
       <div className="panel">
         <h2 className="panel-title">{isEditing ? "Editar orçamento" : "Novo orçamento"}</h2>
 
-        <p className="eyebrow">Obra e cliente</p>
-        <div className="field-grid">
-          {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
-          {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
-          {field(
-            "Tipo de imóvel",
-            <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
-              {CLIENT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>,
-            "clientType",
-          )}
-          {field("E-mail do cliente", <input className="input" type="email" value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail")}
-          {field(
-            "WhatsApp do cliente",
-            <input
-              className="input"
-              type="tel"
-              placeholder="Ex: (11) 9 8888-7777"
-              value={deal.clientePhone}
-              onChange={(e) => set("clientePhone", formatPhoneBR(e.target.value))}
-            />,
-            "clientePhone",
-          )}
-          {field("Endereço", <input className="input" value={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
-          {field("Responsável pelo serviço", <input className="input" value={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
-          {field(
-            "Como chegou até você",
-            <select className="input" value={deal.leadSource} onChange={(e) => set("leadSource", e.target.value)}>
-              {LEAD_SOURCES.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>,
-            "leadSource",
-          )}
-          {deal.leadSource === "Tráfego pago" &&
-            field(
-              "Plataforma do tráfego pago",
-              <select className="input" value={deal.leadSourcePaidChannel} onChange={(e) => set("leadSourcePaidChannel", e.target.value)}>
-                <option value="">Selecione</option>
-                {PAID_TRAFFIC_CHANNELS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>,
-              "leadSourcePaidChannel",
-            )}
-          {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
-          {field("Dias de serviço", <input className="input" type="number" value={deal.dias} onChange={(e) => set("dias", e.target.value)} />, "dias")}
-          {field("Data de início", <input className="input" type="date" value={deal.dataInicio} onChange={(e) => set("dataInicio", e.target.value)} />, "dataInicio")}
-          {field(
-            "Data prevista para terminar",
-            <input className="input" value={deal.dataTermino ? formatDateBR(deal.dataTermino) : "Preencha início e dias"} disabled />,
-            "dataTermino",
-          )}
-          {field("Data da visita técnica", <input className="input" type="date" value={deal.dataVisitaTecnica} onChange={(e) => set("dataVisitaTecnica", e.target.value)} />, "dataVisitaTecnica")}
-        </div>
-
-        <div className="field">
-          <label>Observações da vistoria (superfície, sujidade, estado da obra, restrições de acesso etc.)</label>
-          <textarea
-            className="input"
-            rows={3}
-            style={{ resize: "vertical" }}
-            placeholder="Ex: piso porcelanato polido, cimento aderido em toda a área, rejunte epóxi nas pastilhas do banheiro, obra finalizada aguardando entrega."
-            value={deal.observacoesVisita}
-            onChange={(e) => set("observacoesVisita", e.target.value)}
-          />
-        </div>
-
-        <p className="eyebrow" style={{ marginTop: 16 }}>
-          Equipe
-        </p>
-        <div className="role-grid">
-          {ROLES.map((r) => (
-            <div className="role-card" key={r.key}>
-              <p id={`role-label-${r.key}`}>{r.label}</p>
-              <input
-                className="input"
-                type="number"
-                placeholder="Qtd."
-                aria-label={`Quantidade de ${r.label}`}
-                aria-describedby={`role-label-${r.key}`}
-                value={deal.qtd[r.key]}
-                onChange={(e) => setRole("qtd", r.key, e.target.value)}
-              />
-              <input
-                className="input"
-                type="number"
-                placeholder="Diária (R$)"
-                aria-label={`Diária em reais de ${r.label}`}
-                aria-describedby={`role-label-${r.key}`}
-                value={deal.diaria[r.key]}
-                onChange={(e) => setRole("diaria", r.key, e.target.value)}
-              />
-            </div>
+        <div className="wizard-steps" role="tablist" aria-label="Etapas do orçamento">
+          {STEPS.map((s, i) => (
+            <button
+              key={s.label}
+              type="button"
+              role="tab"
+              aria-selected={step === i}
+              className={`wizard-step${step === i ? " active" : ""}${i < step ? " done" : ""}`}
+              onClick={() => setStep(i)}
+            >
+              <span className="wizard-step-num">{i < step ? "✓" : i + 1}</span>
+              <span className="wizard-step-label">{s.label}</span>
+            </button>
           ))}
         </div>
 
-        <p className="eyebrow" style={{ marginTop: 16 }}>
-          Transporte, alimentação e apoio
-        </p>
-        <div className="field-grid">
-          {field("Qtd. vale-transporte/dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
-          {field("Valor do VT (R$)", <input className="input" type="number" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
-          {field("Qtd. almoços/dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
-          {field("Valor do almoço (R$)", <input className="input" type="number" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
-          {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
-          {field("Pedágio (R$)", <input className="input" type="number" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
-          {field("Km/litro do veículo", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
-          {field("Valor do litro (R$)", <input className="input" type="number" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
-          {field("Km rodados/dia", <input className="input" type="number" value={deal.combKmRodar} onChange={(e) => set("combKmRodar", e.target.value)} />, "combKmRodar")}
+        {step === 0 && (
+          <>
+            <p className="eyebrow">Obra e cliente</p>
+            <div className="field-grid">
+              {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
+              {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
+              {field(
+                "Tipo de imóvel",
+                <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
+                  {CLIENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>,
+                "clientType",
+              )}
+              {field("E-mail do cliente", <input className="input" type="email" value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail")}
+              {field(
+                "WhatsApp do cliente",
+                <input
+                  className="input"
+                  type="tel"
+                  placeholder="Ex: (11) 9 8888-7777"
+                  value={deal.clientePhone}
+                  onChange={(e) => set("clientePhone", formatPhoneBR(e.target.value))}
+                />,
+                "clientePhone",
+              )}
+              {field("Endereço", <input className="input" value={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
+              {field("Responsável pelo serviço", <input className="input" value={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
+              {field(
+                "Como chegou até você",
+                <select className="input" value={deal.leadSource} onChange={(e) => set("leadSource", e.target.value)}>
+                  {LEAD_SOURCES.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>,
+                "leadSource",
+              )}
+              {deal.leadSource === "Tráfego pago" &&
+                field(
+                  "Plataforma do tráfego pago",
+                  <select className="input" value={deal.leadSourcePaidChannel} onChange={(e) => set("leadSourcePaidChannel", e.target.value)}>
+                    <option value="">Selecione</option>
+                    {PAID_TRAFFIC_CHANNELS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>,
+                  "leadSourcePaidChannel",
+                )}
+              {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
+              {field("Dias de serviço", <input className="input" type="number" value={deal.dias} onChange={(e) => set("dias", e.target.value)} />, "dias")}
+              {field("Data de início", <input className="input" type="date" value={deal.dataInicio} onChange={(e) => set("dataInicio", e.target.value)} />, "dataInicio")}
+              {field(
+                "Data prevista para terminar",
+                <input className="input" value={deal.dataTermino ? formatDateBR(deal.dataTermino) : "Preencha início e dias"} disabled />,
+                "dataTermino",
+              )}
+              {field("Data da visita técnica", <input className="input" type="date" value={deal.dataVisitaTecnica} onChange={(e) => set("dataVisitaTecnica", e.target.value)} />, "dataVisitaTecnica")}
+            </div>
+
+            <div className="field">
+              <label>Observações da vistoria (superfície, sujidade, estado da obra, restrições de acesso etc.)</label>
+              <textarea
+                className="input"
+                rows={3}
+                style={{ resize: "vertical" }}
+                placeholder="Ex: piso porcelanato polido, cimento aderido em toda a área, rejunte epóxi nas pastilhas do banheiro, obra finalizada aguardando entrega."
+                value={deal.observacoesVisita}
+                onChange={(e) => set("observacoesVisita", e.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <p className="eyebrow">Equipe</p>
+            <div className="role-grid">
+              {ROLES.map((r) => (
+                <div className="role-card" key={r.key}>
+                  <p id={`role-label-${r.key}`}>{r.label}</p>
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="Qtd."
+                    aria-label={`Quantidade de ${r.label}`}
+                    aria-describedby={`role-label-${r.key}`}
+                    value={deal.qtd[r.key]}
+                    onChange={(e) => setRole("qtd", r.key, e.target.value)}
+                  />
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="Diária (R$)"
+                    aria-label={`Diária em reais de ${r.label}`}
+                    aria-describedby={`role-label-${r.key}`}
+                    value={deal.diaria[r.key]}
+                    onChange={(e) => setRole("diaria", r.key, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="eyebrow">Transporte, alimentação e apoio</p>
+            <div className="field-grid">
+              {field("Qtd. vale-transporte/dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
+              {field("Valor do VT (R$)", <input className="input" type="number" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
+              {field("Qtd. almoços/dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
+              {field("Valor do almoço (R$)", <input className="input" type="number" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
+              {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
+              {field("Pedágio (R$)", <input className="input" type="number" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
+              {field("Km/litro do veículo", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
+              {field("Valor do litro (R$)", <input className="input" type="number" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
+              {field("Km rodados/dia", <input className="input" type="number" value={deal.combKmRodar} onChange={(e) => set("combKmRodar", e.target.value)} />, "combKmRodar")}
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <p className="eyebrow">Materiais e produtos</p>
+            {(deal.produtos || []).length > 0 && (
+              <div className="produtos-table">
+                <div className="produtos-row produtos-header">
+                  <span>Produto</span>
+                  <span>Qtd.</span>
+                  <span>Custo unit. (R$)</span>
+                  <span>Subtotal</span>
+                  <span></span>
+                </div>
+                {(deal.produtos || []).map((p, i) => (
+                  <div className="produtos-row" key={i}>
+                    <input
+                      className="input"
+                      placeholder="Ex: detergente"
+                      aria-label={`Nome do produto ${i + 1}`}
+                      value={p.nome}
+                      onChange={(e) => setProduto(i, { nome: e.target.value })}
+                    />
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      aria-label={`Quantidade do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                      value={p.quantidade}
+                      onChange={(e) => setProduto(i, { quantidade: e.target.value })}
+                    />
+                    <input
+                      className="input"
+                      type="number"
+                      aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                      value={p.valorUnitario}
+                      onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
+                    />
+                    <span className="produtos-subtotal">{formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}</span>
+                    <button
+                      type="button"
+                      className="icon-action-btn danger"
+                      onClick={() => removeProduto(i)}
+                      aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                    >
+                      remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button type="button" className="icon-action-btn" onClick={addProduto} style={{ marginBottom: 16 }}>
+              + adicionar produto
+            </button>
+
+            <div className="material-pct-box">
+              <label htmlFor="qf-materialPctManual">% de materiais sobre o custo-base</label>
+              <div className="material-pct-input">
+                <input
+                  id="qf-materialPctManual"
+                  className="input"
+                  type="number"
+                  placeholder={`Automático: ${(calc.materialPct * 100).toFixed(0)}`}
+                  value={deal.materialPctManual}
+                  onChange={(e) => set("materialPctManual", e.target.value)}
+                />
+                <span className="material-pct-suffix">%</span>
+              </div>
+              <p className="microlabel" style={{ marginTop: 6 }}>
+                Deixe em branco pra calcular automático com base nos produtos informados (agora: {(calc.materialPct * 100).toFixed(0)}%).
+              </p>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <p className="eyebrow">Custos administrativos e margem</p>
+            <div className="field-grid">
+              {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
+              {field("Rateio administrativo (R$)", <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />, "rateioAdm")}
+              {field("Valor da nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
+              {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
+              {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
+              {field(
+                "Forçar valor final (R$, opcional)",
+                <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
+                "valorPagamento",
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="wizard-nav">
+          <button type="button" className="icon-action-btn" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
+            ← Voltar
+          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {step < lastStep && (
+              <button type="button" className="link-btn" onClick={handleSave} disabled={saving}>
+                salvar agora
+              </button>
+            )}
+            {step < lastStep ? (
+              <button type="button" className="save-btn" onClick={() => setStep((s) => Math.min(lastStep, s + 1))}>
+                Avançar →
+              </button>
+            ) : (
+              <button className="save-btn" onClick={handleSave} disabled={saving}>
+                {isEditing ? "Salvar alterações" : "Salvar e enviar para propostas"}
+              </button>
+            )}
+          </div>
         </div>
 
-        <p className="eyebrow" style={{ marginTop: 16 }}>
-          Materiais e produtos
-        </p>
-        {(deal.produtos || []).length > 0 && (
-          <div className="produtos-table">
-            <div className="produtos-row produtos-header">
-              <span>Produto</span>
-              <span>Qtd.</span>
-              <span>Custo unit. (R$)</span>
-              <span>Subtotal</span>
-              <span></span>
-            </div>
-            {(deal.produtos || []).map((p, i) => (
-              <div className="produtos-row" key={i}>
-                <input
-                  className="input"
-                  placeholder="Ex: detergente"
-                  aria-label={`Nome do produto ${i + 1}`}
-                  value={p.nome}
-                  onChange={(e) => setProduto(i, { nome: e.target.value })}
-                />
-                <input
-                  className="input"
-                  type="number"
-                  min={0}
-                  aria-label={`Quantidade do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                  value={p.quantidade}
-                  onChange={(e) => setProduto(i, { quantidade: e.target.value })}
-                />
-                <input
-                  className="input"
-                  type="number"
-                  aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                  value={p.valorUnitario}
-                  onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
-                />
-                <span className="produtos-subtotal">{formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}</span>
-                <button
-                  type="button"
-                  className="icon-action-btn danger"
-                  onClick={() => removeProduto(i)}
-                  aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                >
-                  remover
-                </button>
-              </div>
-            ))}
+        {step === lastStep && (
+          <div className="actions-row">
+            <button className="pdf-btn" onClick={() => setPresenting(true)} type="button" title="Mostra a proposta em slides, pra apresentar no celular/tablet">
+              Apresentar
+            </button>
+            <button className="pdf-btn" onClick={handleDownloadClientPdf} type="button" title="Proposta limpa, sem detalhamento de custos — pra mandar ao cliente">
+              PDF para o cliente
+            </button>
+            <button className="pdf-btn" onClick={handleDownloadInternalPdf} type="button" title="Com detalhamento de custos — só pra uso interno da empresa">
+              PDF interno (com custos)
+            </button>
+            {isEditing && onCancelEdit && (
+              <button className="link-btn" type="button" onClick={onCancelEdit}>
+                cancelar edição
+              </button>
+            )}
           </div>
         )}
-        <button type="button" className="icon-action-btn" onClick={addProduto} style={{ marginBottom: 12 }}>
-          + adicionar produto
-        </button>
-        <div className="field-grid">
-          {field(
-            `% de materiais sobre o custo-base (deixe vazio p/ automático: ${(calc.materialPct * 100).toFixed(0)}%)`,
-            <input className="input" type="number" value={deal.materialPctManual} onChange={(e) => set("materialPctManual", e.target.value)} />,
-            "materialPctManual",
-          )}
-        </div>
-
-        <p className="eyebrow" style={{ marginTop: 16 }}>
-          Custos administrativos e margem
-        </p>
-        <div className="field-grid">
-          {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
-          {field("Rateio administrativo (R$)", <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />, "rateioAdm")}
-          {field("Valor da nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
-          {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
-          {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
-          {field(
-            "Forçar valor final (R$, opcional)",
-            <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
-            "valorPagamento",
-          )}
-        </div>
-
-        <div className="actions-row">
-          <button className="save-btn" onClick={handleSave} disabled={saving}>
-            {isEditing ? "Salvar alterações" : "Salvar e enviar para propostas"}
-          </button>
-          <button className="pdf-btn" onClick={() => setPresenting(true)} type="button" title="Mostra a proposta em slides, pra apresentar no celular/tablet">
-            Apresentar
-          </button>
-          <button className="pdf-btn" onClick={handleDownloadClientPdf} type="button" title="Proposta limpa, sem detalhamento de custos — pra mandar ao cliente">
-            PDF para o cliente
-          </button>
-          <button className="pdf-btn" onClick={handleDownloadInternalPdf} type="button" title="Com detalhamento de custos — só pra uso interno da empresa">
-            PDF interno (com custos)
-          </button>
-          {isEditing && onCancelEdit && (
-            <button className="link-btn" type="button" onClick={onCancelEdit}>
-              cancelar edição
-            </button>
-          )}
-        </div>
         <p className={`save-msg${saveError ? " is-error" : ""}`} role="status" aria-live="polite">
           {saveMsg}
         </p>
