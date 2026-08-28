@@ -29,9 +29,13 @@ service cloud.firestore {
     match /accounts/{accountId} {
       allow read: if isAdmin() || ownsAccount(accountId);
       // Cadastro self-service: a própria pessoa cria sua conta, mas só como "pending_payment"
-      // — só o webhook do Stripe (via Admin SDK, ignora regras) consegue marcar como "active".
+      // — só o webhook do Asaas (via Admin SDK, ignora regras) consegue marcar como "active".
+      // Exceção: o plano "teste" é gratuito e ativa a própria conta na hora, sem pagamento.
       allow create: if isAdmin() ||
-        (ownsAccount(accountId) && request.resource.data.status == "pending_payment");
+        (ownsAccount(accountId) && (
+          request.resource.data.status == "pending_payment" ||
+          (request.resource.data.status == "active" && request.resource.data.plan == "teste")
+        ));
       allow update: if isAdmin() ||
         (ownsAccount(accountId) &&
           !request.resource.data.diff(resource.data).affectedKeys()
