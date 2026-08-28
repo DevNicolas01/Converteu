@@ -15,6 +15,12 @@
   --amber-500: #1D4ED8;
   --emerald-400: #15803D;
   --red-400: #DC2626;
+  --cat-1: #2563EB;
+  --cat-2: #EA580C;
+  --cat-3: #0D9488;
+  --cat-4: #C026D3;
+  --cat-5: #CA8A04;
+  --cat-6: #9F1239;
   --shadow-card: 0 1px 2px rgba(20, 32, 58, 0.05), 0 1px 8px rgba(20, 32, 58, 0.04);
   --logo-chip-bg: #14203A;
 }
@@ -36,6 +42,12 @@
   --amber-500: #2563EB;
   --emerald-400: #4ADE80;
   --red-400: #F87171;
+  --cat-1: #3B82F6;
+  --cat-2: #EA580C;
+  --cat-3: #0D9488;
+  --cat-4: #D946EF;
+  --cat-5: #A16207;
+  --cat-6: #F43F5E;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 10px rgba(0, 0, 0, 0.25);
   --logo-chip-bg: transparent;
 }

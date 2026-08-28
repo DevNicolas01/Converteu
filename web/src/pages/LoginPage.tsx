@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
 export default function LoginPage({ adminHint = false }: { adminHint?: boolean }) {
   const { login } = useAuth();
@@ -59,12 +60,12 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
             />
             <button
               type="button"
-              className="link-btn"
+              className="theme-toggle"
               onClick={() => setShowPassword((s) => !s)}
               aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-              style={{ whiteSpace: "nowrap" }}
+              aria-pressed={showPassword}
             >
-              {showPassword ? "Ocultar" : "Ver"}
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
         </div>

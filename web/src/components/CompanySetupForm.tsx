@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CompanyProfile } from "../lib/db";
+import { formatCpfCnpj } from "../lib/calc";
 
 interface Props {
   initial: CompanyProfile;
@@ -58,7 +59,7 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
       </div>
       <div className="field">
         <label htmlFor="company-cnpj">CNPJ (opcional)</label>
-        <input id="company-cnpj" className="input" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0001-00" />
+        <input id="company-cnpj" className="input" value={cnpj} onChange={(e) => setCnpj(formatCpfCnpj(e.target.value))} placeholder="00.000.000/0001-00" />
       </div>
       <div className="field">
         <label htmlFor="company-endereco">Endereço (opcional)</label>

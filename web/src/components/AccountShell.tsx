@@ -142,9 +142,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     setShowCompanyEditor(false);
   }
 
-  if (company && !company.companyName) {
-    return <CompanySetupForm initial={{}} onSave={handleSaveCompany} />;
-  }
+  const companyIncomplete = !!company && (!company.companyName || !company.endereco || !company.telefone || !company.logoUrl);
 
   async function handleSaveDeal(deal: Deal) {
     if (deal.id) {
@@ -253,6 +251,18 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
       )}
 
       <main className="main" id="main-content">
+        {tab === "calc" && companyIncomplete && (
+          <div className="hint-banner" role="status">
+            <span>Coloque os dados da sua empresa pra aparecer no PDF dos orçamentos.</span>
+            <button
+              type="button"
+              onClick={() => setShowCompanyEditor(true)}
+              style={{ fontSize: 12, whiteSpace: "nowrap", border: "1px solid var(--amber-500)", borderRadius: 6, padding: "4px 10px" }}
+            >
+              Completar perfil
+            </button>
+          </div>
+        )}
         {tab === "calc" && (
           <QuoteForm
             key={editingDeal?.id || "new"}

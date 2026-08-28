@@ -2,6 +2,22 @@ import { jsPDF } from "jspdf";
 import { calcDeal, formatBRL, formatDateBR, type Deal } from "./calc";
 import type { CompanyProfile } from "./db";
 
+type RGB = [number, number, number];
+const NAVY: RGB = [20, 32, 58];
+const BLUE: RGB = [37, 99, 235];
+const BLUE_DARK: RGB = [29, 78, 216];
+const MUTED: RGB = [103, 114, 138];
+const BORDER: RGB = [222, 227, 236];
+const BG_SOFT: RGB = [244, 246, 250];
+const WHITE: RGB = [255, 255, 255];
+const HEADER_SUBTEXT: RGB = [198, 209, 228];
+
+const PAGE_W = 210;
+const MARGIN_X = 16;
+const CONTENT_W = PAGE_W - MARGIN_X * 2;
+const HEADER_H = 34;
+const FOOTER_Y = 287;
+
 function getImageDimensions(src: string): Promise<{ width: number; height: number; img: HTMLImageElement } | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -27,121 +43,232 @@ function buildProposalDoc(
   const companyName = company.companyName || "Sua empresa";
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const calc = calcDeal(deal);
-  const pageW = 210;
-  const marginX = 18;
-  let y = 20;
+  let y = 0;
+  let page = 1;
 
-  let textX = marginX;
-  if (imgInfo) {
-    const box = fitBox(imgInfo.width, imgInfo.height, 18, 15);
-    doc.addImage(imgInfo.img, marginX, 9 + (15 - box.h) / 2, box.w, box.h);
-    textX = marginX + box.w + 6;
-  }
+  function drawHeader() {
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, PAGE_W, HEADER_H, "F");
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(20, 32, 58);
-  doc.text(companyName, textX, 18);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(103, 114, 138);
-  const companyLine = [company.cnpj && `CNPJ ${company.cnpj}`, company.endereco, company.telefone, company.email]
-    .filter(Boolean)
-    .join("  •  ");
-  doc.text(companyLine || (includeCosts ? "Orçamento interno" : "Orçamento de serviço"), textX, 24);
+    let textX = MARGIN_X;
+    if (imgInfo) {
+      const chipSize = 22;
+      doc.setFillColor(...WHITE);
+      doc.roundedRect(MARGIN_X, (HEADER_H - chipSize) / 2, chipSize, chipSize, 2, 2, "F");
+      const box = fitBox(imgInfo.width, imgInfo.height, chipSize - 5, chipSize - 5);
+      doc.addImage(imgInfo.img, MARGIN_X + (chipSize - box.w) / 2, (HEADER_H - box.h) / 2, box.w, box.h);
+      textX = MARGIN_X + chipSize + 6;
+    }
 
-  doc.setDrawColor(225, 229, 236);
-  doc.line(marginX, 30, pageW - marginX, 30);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...WHITE);
+    doc.text(companyName, textX, HEADER_H / 2 - 2);
 
-  y = 40;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(20, 32, 58);
-  doc.text(`Obra Nº ${obraNumero} — ${deal.obraNome || "Sem nome"}`, marginX, y);
-  y += 10;
+    const companyLine = [company.cnpj && `CNPJ ${company.cnpj}`, company.endereco, company.telefone, company.email]
+      .filter(Boolean)
+      .join("   •   ");
+    if (companyLine) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...HEADER_SUBTEXT);
+      doc.text(doc.splitTextToSize(companyLine, PAGE_W - textX - MARGIN_X - 45), textX, HEADER_H / 2 + 5);
+    }
 
-  const addSectionTitle = (title: string) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(29, 78, 216);
-    doc.text(title, marginX, y);
-    y += 7;
-  };
+    doc.setTextColor(...WHITE);
+    doc.text(includeCosts ? "ORÇAMENTO INTERNO" : "ORÇAMENTO", PAGE_W - MARGIN_X, 13, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...HEADER_SUBTEXT);
+    doc.text(`Obra Nº ${obraNumero}`, PAGE_W - MARGIN_X, 19, { align: "right" });
+    doc.text(new Date().toLocaleDateString("pt-BR"), PAGE_W - MARGIN_X, 24, { align: "right" });
 
-  const addRow = (label: string, value: string | number | null | undefined) => {
+    y = HEADER_H + 12;
+  }
+
+  function drawFooter() {
+    doc.setDrawColor(...BORDER);
+    doc.line(MARGIN_X, FOOTER_Y - 4, PAGE_W - MARGIN_X, FOOTER_Y - 4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    const agora = new Date();
+    const geradoEm = `${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    doc.text(`Gerado em ${geradoEm} — ${companyName}`, MARGIN_X, FOOTER_Y);
+    doc.text(`Página ${page}`, PAGE_W - MARGIN_X, FOOTER_Y, { align: "right" });
+  }
+
+  function newPage() {
+    drawFooter();
+    doc.addPage();
+    page += 1;
+    drawHeader();
+  }
+
+  function ensureSpace(needed: number) {
+    if (y + needed > FOOTER_Y - 10) newPage();
+  }
+
+  function sectionTitle(title: string) {
+    ensureSpace(12);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...BLUE_DARK);
+    doc.text(title.toUpperCase(), MARGIN_X, y);
+    y += 6;
+  }
+
+  function infoCard(pairs: [string, string][]) {
+    const rowsPerCol = Math.ceil(pairs.length / 2);
+    const pad = 6;
+    const rowH = 10.5;
+    const colW = (CONTENT_W - pad * 2 - 8) / 2;
+    const boxH = rowsPerCol * rowH + pad * 2;
+    ensureSpace(boxH + 4);
+
+    doc.setFillColor(...BG_SOFT);
+    doc.setDrawColor(...BORDER);
+    doc.roundedRect(MARGIN_X, y, CONTENT_W, boxH, 3, 3, "FD");
+
+    pairs.forEach(([label, value], i) => {
+      const col = i < rowsPerCol ? 0 : 1;
+      const row = i % rowsPerCol;
+      const cellX = MARGIN_X + pad + col * (colW + 8);
+      const cellY = y + pad + row * rowH;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...MUTED);
+      doc.text(label.toUpperCase(), cellX, cellY + 3);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...NAVY);
+      doc.text(doc.splitTextToSize(value, colW)[0] || value, cellX, cellY + 8.5);
+    });
+
+    y += boxH + 9;
+  }
+
+  function noteBox(text: string) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    const lines = doc.splitTextToSize(text, CONTENT_W - 12);
+    const boxH = lines.length * 5 + 10;
+    ensureSpace(boxH + 4);
+    doc.setFillColor(...BG_SOFT);
+    doc.setDrawColor(...BORDER);
+    doc.roundedRect(MARGIN_X, y, CONTENT_W, boxH, 3, 3, "FD");
+    doc.setTextColor(60, 68, 84);
+    doc.text(lines, MARGIN_X + 6, y + 7);
+    y += boxH + 9;
+  }
+
+  type TableRow = { label: string; value: string; emphasis?: boolean };
+
+  function costsTable(rows: TableRow[]) {
+    const headerH = 8;
+    const rowH = 7.5;
+    ensureSpace(headerH + rowH + 2);
+
+    doc.setFillColor(...BLUE);
+    doc.rect(MARGIN_X, y, CONTENT_W, headerH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...WHITE);
+    doc.text("ITEM", MARGIN_X + 4, y + 5.5);
+    doc.text("VALOR", PAGE_W - MARGIN_X - 4, y + 5.5, { align: "right" });
+    y += headerH;
+
+    rows.forEach((row, i) => {
+      ensureSpace(rowH + 2);
+      if (row.emphasis) {
+        doc.setFillColor(...BG_SOFT);
+        doc.rect(MARGIN_X, y, CONTENT_W, rowH, "F");
+      } else if (i % 2 === 1) {
+        doc.setFillColor(250, 251, 253);
+        doc.rect(MARGIN_X, y, CONTENT_W, rowH, "F");
+      }
+      doc.setFont("helvetica", row.emphasis ? "bold" : "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(...NAVY);
+      doc.text(row.label, MARGIN_X + 4, y + 5.2);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(row.emphasis ? BLUE_DARK[0] : NAVY[0], row.emphasis ? BLUE_DARK[1] : NAVY[1], row.emphasis ? BLUE_DARK[2] : NAVY[2]);
+      doc.text(row.value, PAGE_W - MARGIN_X - 4, y + 5.2, { align: "right" });
+      y += rowH;
+    });
+    doc.setDrawColor(...BORDER);
+    doc.rect(MARGIN_X, y - rows.length * rowH - headerH, CONTENT_W, rows.length * rowH + headerH);
+    y += 9;
+  }
+
+  function priceBanner(label: string, value: string) {
+    const boxH = 26;
+    ensureSpace(boxH + 4);
+    doc.setFillColor(...NAVY);
+    doc.roundedRect(MARGIN_X, y, CONTENT_W, boxH, 3, 3, "F");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(103, 114, 138);
-    doc.text(label, marginX, y);
+    doc.setTextColor(...HEADER_SUBTEXT);
+    doc.text(label.toUpperCase(), MARGIN_X + 8, y + 10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 32, 58);
-    doc.text(String(value == null || value === "" ? "-" : value), marginX + 68, y);
-    y += 6.5;
-  };
+    doc.setFontSize(22);
+    doc.setTextColor(...WHITE);
+    doc.text(value, MARGIN_X + 8, y + 20);
+    y += boxH + 8;
+  }
 
-  addSectionTitle("Dados do cliente e da obra");
-  addRow("Cliente", deal.clientName || "-");
-  addRow("Tipo de imóvel", deal.clientType || "-");
-  addRow("Endereço", deal.endereco || "-");
-  addRow("Responsável pelo serviço", deal.responsavel || "-");
-  addRow("Como o cliente chegou até você", deal.leadSource || "-");
-  addRow("Tamanho do local", `${deal.metragem || 0} m²`);
-  addRow("Duração do serviço", `${deal.dias || 0} dia(s)`);
-  y += 2;
-  addRow("Data da visita técnica", formatDateBR(deal.dataVisitaTecnica));
-  addRow("Data de início do serviço", formatDateBR(deal.dataInicio));
-  addRow("Data prevista para terminar", formatDateBR(deal.dataTermino));
+  drawHeader();
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(...NAVY);
+  doc.text(deal.obraNome || "Orçamento de serviço", MARGIN_X, y);
+  y += 9;
+
+  sectionTitle("Dados do cliente e da obra");
+  infoCard([
+    ["Cliente", deal.clientName || "-"],
+    ["Tipo de imóvel", deal.clientType || "-"],
+    ["Endereço", deal.endereco || "-"],
+    ["Responsável pelo serviço", deal.responsavel || "-"],
+    ["Tamanho do local", `${deal.metragem || 0} m²`],
+    ["Duração do serviço", `${deal.dias || 0} dia(s)`],
+    ["Data da visita técnica", formatDateBR(deal.dataVisitaTecnica)],
+    ["Início do serviço", formatDateBR(deal.dataInicio)],
+    ["Previsão de término", formatDateBR(deal.dataTermino)],
+  ]);
 
   if (deal.observacoesVisita) {
-    y += 5;
-    addSectionTitle("Observações da vistoria");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(60, 68, 84);
-    const lines = doc.splitTextToSize(deal.observacoesVisita, pageW - marginX * 2);
-    doc.text(lines, marginX, y);
-    y += lines.length * 5 + 2;
+    sectionTitle("Observações da vistoria");
+    noteBox(deal.observacoesVisita);
   }
 
   if (includeCosts) {
-    y += 5;
-    addSectionTitle("Resumo de custos (uso interno)");
-    addRow("Transporte e alimentação", formatBRL(calc.apoioTotal));
-    addRow("Equipe", formatBRL(calc.maoDeObraTotal));
+    sectionTitle("Resumo de custos (uso interno)");
+    const rows: TableRow[] = [
+      { label: "Equipe", value: formatBRL(calc.maoDeObraTotal) },
+      { label: "Transporte e alimentação", value: formatBRL(calc.apoioTotal) },
+    ];
     (deal.produtos || [])
       .filter((p) => p.nome || p.valorUnitario)
       .forEach((p) => {
         const qtd = Number(p.quantidade) || 1;
         const subtotal = qtd * (Number(p.valorUnitario) || 0);
-        addRow(`Produto: ${p.nome || "-"} (${qtd}x)`, formatBRL(subtotal));
+        rows.push({ label: `Produto: ${p.nome || "-"} (${qtd}x)`, value: formatBRL(subtotal) });
       });
-    addRow("Materiais (total)", formatBRL(calc.materiaisTotal));
-    addRow("Impostos", formatBRL(calc.impostoTotal));
-    addRow("Custo total do serviço", formatBRL(calc.custosOperacionais));
-    addRow("Lucro estimado", formatBRL(calc.lucroRS));
-    addRow("Margem real", `${(calc.margemReal * 100).toFixed(1)}%`);
+    rows.push({ label: "Materiais (total)", value: formatBRL(calc.materiaisTotal) });
+    rows.push({ label: "Impostos", value: formatBRL(calc.impostoTotal) });
+    rows.push({ label: "Custo total do serviço", value: formatBRL(calc.custosOperacionais), emphasis: true });
+    rows.push({ label: "Lucro estimado", value: formatBRL(calc.lucroRS), emphasis: true });
+    rows.push({ label: "Margem real", value: `${(calc.margemReal * 100).toFixed(1)}%`, emphasis: true });
+    costsTable(rows);
   }
 
-  y += 6;
-  doc.setDrawColor(225, 229, 236);
-  doc.line(marginX, y, pageW - marginX, y);
-  y += 10;
+  priceBanner("Valor final da proposta", formatBRL(calc.valorFinal));
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.setTextColor(103, 114, 138);
-  doc.text("Valor final da proposta", marginX, y);
-  y += 9;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor(29, 78, 216);
-  doc.text(formatBRL(calc.valorFinal), marginX, y);
-
-  const agora = new Date();
-  const geradoEm = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  doc.setFontSize(8);
-  doc.setTextColor(150, 160, 175);
-  doc.text(`Gerado em ${geradoEm} — ${companyName}`, marginX, 287);
+  drawFooter();
 
   const nomeArquivo = (deal.clientName || "cliente")
     .toLowerCase()

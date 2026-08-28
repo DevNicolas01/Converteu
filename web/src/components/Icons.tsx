@@ -44,6 +44,25 @@ export function UserIcon() {
   );
 }
 
+export function EyeIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  );
+}
+
+export function EyeOffIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+      <line x1="2.5" y1="2.5" x2="21.5" y2="21.5"></line>
+    </svg>
+  );
+}
+
 export function LogoutIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">

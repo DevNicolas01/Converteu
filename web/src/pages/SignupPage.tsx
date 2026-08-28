@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import { PLANS, PLAN_PRICES, formatBRL, type PlanId, type BillingCycle } from "../lib/calc";
+import { saveCompanyProfile } from "../lib/db";
+import { PLANS, PLAN_PRICES, formatBRL, formatCpfCnpj, type PlanId, type BillingCycle } from "../lib/calc";
+import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
 const FAR_FUTURE = new Date();
 FAR_FUTURE.setFullYear(FAR_FUTURE.getFullYear() + 100);
@@ -51,6 +53,9 @@ export default function SignupPage() {
         subscriptionExpiresAt: plan === "teste" ? Timestamp.fromDate(FAR_FUTURE) : null,
         createdAt: Timestamp.now(),
       });
+      // Já aproveita o nome e o CNPJ/CPF que ele acabou de digitar, pra não pedir de novo
+      // na primeira vez que entrar no app.
+      await saveCompanyProfile(uid, { companyName: companyName.trim(), cnpj: cpfCnpj.trim() });
     } catch (err) {
       console.error("Falha ao criar a conta", err);
       const code = (err as { code?: string }).code;
@@ -109,9 +114,9 @@ export default function SignupPage() {
             id="signup-cpfcnpj"
             className="input"
             inputMode="numeric"
-            placeholder="Só números"
+            placeholder="000.000.000-00"
             value={cpfCnpj}
-            onChange={(e) => setCpfCnpj(e.target.value)}
+            onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
             required
           />
           <p className="panel-help" style={{ margin: "4px 0 0" }}>
@@ -186,12 +191,12 @@ export default function SignupPage() {
             />
             <button
               type="button"
-              className="link-btn"
+              className="theme-toggle"
               onClick={() => setShowPassword((s) => !s)}
               aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-              style={{ whiteSpace: "nowrap" }}
+              aria-pressed={showPassword}
             >
-              {showPassword ? "Ocultar" : "Ver"}
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
         </div>
