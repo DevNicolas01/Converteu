@@ -21,8 +21,10 @@ export interface Deal {
   closedAt: string | null;
   sentAt: string | null;
   followUpDate: string;
-  /** Só relevante quando stage === "fechado": o cliente já pagou essa proposta? */
-  pago: boolean;
+  /** Só relevante quando stage === "fechado": como foi (ou vai ser) pago. */
+  formaPagamento: string;
+  /** Valor já recebido do cliente (R$) — pode ser menor que valorFinal quando o pagamento é parcelado/faseado. */
+  valorPago: string;
 
   metragem: string;
   dias: string;
@@ -70,6 +72,9 @@ export const ROLES = [
 export const LEAD_SOURCES = ["Google Meu Negócio", "Tráfego pago", "Redes sociais", "Indicação", "Recorrente", "Outro"];
 
 export const CLIENT_TYPES = ["Residência", "Apartamento", "Sala comercial", "Condomínio", "Obra/Construtora", "Outro"];
+
+/** Só relevante quando stage === "fechado" — como o cliente pagou (ou vai pagar). */
+export const FORMAS_PAGAMENTO = ["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Boleto", "Transferência", "Parcelado"];
 
 /** Só relevante quando leadSource === "Tráfego pago" — qual plataforma trouxe o lead. */
 export const PAID_TRAFFIC_CHANNELS = ["Google", "Meta"];
@@ -124,7 +129,8 @@ export function emptyDeal(): Deal {
     closedAt: null,
     sentAt: null,
     followUpDate: "",
-    pago: false,
+    formaPagamento: "",
+    valorPago: "0",
 
     metragem: "",
     dias: "",

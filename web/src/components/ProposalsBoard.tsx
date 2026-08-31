@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import { STAGES, formatBRL, num, type Deal } from "../lib/calc";
+import { STAGES, FORMAS_PAGAMENTO, formatBRL, num, type Deal } from "../lib/calc";
 import { buildWhatsAppShareLink } from "../lib/db";
 import { MESSAGE_TEMPLATES } from "../lib/templates";
 import { downloadClientPdf } from "../lib/pdf";
@@ -13,7 +13,7 @@ interface Props {
   onDelete: (id: string) => void;
   onChangeStage: (deal: Deal, stage: string) => void;
   onSetFollowUpDate: (deal: Deal, date: string) => void;
-  onSetPago: (deal: Deal, pago: boolean) => void;
+  onSetPagamento: (deal: Deal, patch: Partial<Pick<Deal, "formaPagamento" | "valorPago">>) => void;
 }
 
 function daysSince(iso: string | null | undefined) {
@@ -22,7 +22,7 @@ function daysSince(iso: string | null | undefined) {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
-function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate, onSetPago }: Props & { deal: Deal }) {
+function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate, onSetPagamento }: Props & { deal: Deal }) {
   const isDecided = deal.stage === "fechado" || deal.stage === "perdido";
   const [presenting, setPresenting] = useState(false);
   const [expanded, setExpanded] = useState(!isDecided);
@@ -32,6 +32,14 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
   const message = template.build(deal, companyName, num(deal.valorFinal));
   const followUpId = useId();
   const templateSelectId = useId();
+  const formaPagamentoId = useId();
+  const valorPagoId = useId();
+
+  const valorFinalNum = num(deal.valorFinal);
+  const valorPagoNum = num(deal.valorPago);
+  const faltaReceber = Math.max(0, valorFinalNum - valorPagoNum);
+  const paymentStatus = valorFinalNum > 0 && valorPagoNum >= valorFinalNum ? "paid" : valorPagoNum > 0 ? "partial" : "unpaid";
+  const paymentLabel = paymentStatus === "paid" ? "Pago" : paymentStatus === "partial" ? "Pago parcial" : "A receber";
 
   // WhatsApp e e-mail não deixam anexar arquivo por link (limitação da própria plataforma,
   // não dá pra contornar via navegador) — então a gente baixa o PDF automaticamente e já
@@ -72,10 +80,11 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
       {isDecided && placeLabel && <p className="deal-meta">{placeLabel}</p>}
 
       {deal.stage === "fechado" && (
-        <label className="pago-toggle">
-          <input type="checkbox" checked={!!deal.pago} onChange={(e) => onSetPago(deal, e.target.checked)} />
-          {deal.pago ? "Pago" : "Ainda não pago"}
-        </label>
+        <p className={`payment-status ${paymentStatus}`}>
+          {paymentLabel} — {formatBRL(valorPagoNum)} de {formatBRL(valorFinalNum)}
+          {deal.formaPagamento && ` · ${deal.formaPagamento}`}
+          {paymentStatus === "partial" && ` (falta ${formatBRL(faltaReceber)})`}
+        </p>
       )}
 
       {isDecided && (
@@ -116,6 +125,41 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                 value={deal.followUpDate || ""}
                 onChange={(e) => onSetFollowUpDate(deal, e.target.value)}
               />
+            </div>
+          )}
+
+          {deal.stage === "fechado" && (
+            <div className="cost-group-fields" style={{ marginTop: 10 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor={formaPagamentoId} className="microlabel">
+                  Forma de pagamento
+                </label>
+                <select
+                  id={formaPagamentoId}
+                  className="input"
+                  value={deal.formaPagamento}
+                  onChange={(e) => onSetPagamento(deal, { formaPagamento: e.target.value })}
+                >
+                  <option value="">Selecione</option>
+                  {FORMAS_PAGAMENTO.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor={valorPagoId} className="microlabel">
+                  Valor recebido (R$)
+                </label>
+                <input
+                  id={valorPagoId}
+                  className="input"
+                  type="number"
+                  value={deal.valorPago}
+                  onChange={(e) => onSetPagamento(deal, { valorPago: e.target.value })}
+                />
+              </div>
             </div>
           )}
 

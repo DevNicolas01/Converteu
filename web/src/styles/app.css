@@ -1003,21 +1003,22 @@
   padding-bottom: 10px;
 }
 
-.pago-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.payment-status {
   font-size: 12px;
   font-weight: 600;
-  color: var(--n-400);
   margin: 6px 0;
-  cursor: pointer;
 }
 
-.pago-toggle input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--emerald-400);
+.payment-status.paid {
+  color: var(--emerald-400);
+}
+
+.payment-status.partial {
+  color: var(--amber-500);
+}
+
+.payment-status.unpaid {
+  color: var(--n-500);
 }
 
 .deal-card-section {

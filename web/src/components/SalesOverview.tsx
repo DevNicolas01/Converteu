@@ -34,7 +34,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
   const taxaConversao = decididas > 0 ? (fechados.length / decididas) * 100 : 0;
   const ticketMedio = fechados.length > 0 ? valorVendido / fechados.length : 0;
 
-  const valorPago = fechados.filter((d) => d.pago).reduce((s, d) => s + num(d.valorFinal), 0);
+  const valorPago = fechados.reduce((s, d) => s + Math.min(num(d.valorPago), num(d.valorFinal)), 0);
   const valorNaoPago = valorVendido - valorPago;
   const pagoPct = valorVendido > 0 ? (valorPago / valorVendido) * 100 : 0;
 
@@ -62,6 +62,18 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
       .sort((a, b) => b[1] - a[1])
       .map(([label, value], i) => ({ label, value, color: CAT_COLORS[i % CAT_COLORS.length] }));
   }, [base]);
+
+  const porFormaPagamento = useMemo(() => {
+    const map = new Map<string, number>();
+    fechados.forEach((d) => {
+      const key = d.formaPagamento || "Não informado";
+      map.set(key, (map.get(key) || 0) + num(d.valorFinal));
+    });
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, value], i) => ({ label, value, color: CAT_COLORS[i % CAT_COLORS.length] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fechados]);
 
   const faturamentoMensal = useMemo(() => {
     const now = new Date();
@@ -158,7 +170,16 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
           )}
         </div>
 
-        <div className="chart-card" style={{ gridColumn: "span 2" }}>
+        <div className="chart-card">
+          <p className="chart-title">Formas de pagamento (fechados)</p>
+          {porFormaPagamento.length === 0 ? (
+            <p className="chart-empty">Nenhum fechado ainda.</p>
+          ) : (
+            <CircleChart data={porFormaPagamento} />
+          )}
+        </div>
+
+        <div className="chart-card">
           <p className="chart-title">Vendas por cliente (fechados)</p>
           {porCliente.length === 0 ? (
             <p className="chart-empty">Nenhuma venda fechada ainda.</p>
