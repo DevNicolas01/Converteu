@@ -115,6 +115,203 @@
   }
 }
 
+.signup-panel {
+  max-width: 700px;
+  animation: panel-in 0.45s ease both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.plan-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.plan-legend {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--n-300);
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.billing-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--n-950);
+  border: 1px solid var(--n-800);
+  margin-bottom: 16px;
+}
+
+.billing-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--n-500);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.billing-toggle-btn.active {
+  background: var(--amber-400);
+  color: #fff;
+}
+
+.billing-save-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--emerald-400);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  padding: 20px 12px 16px;
+  border: 2px solid var(--n-800);
+  border-radius: 12px;
+  background: var(--n-900);
+  cursor: pointer;
+  opacity: 0;
+  animation: plan-card-in 0.4s ease forwards;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+@keyframes plan-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.plan-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--amber-400);
+}
+
+.plan-card.selected {
+  border-color: var(--amber-400);
+  box-shadow: 0 0 0 3px var(--amber-300);
+  transform: translateY(-3px);
+}
+
+.plan-card.recommended {
+  border-color: var(--amber-500);
+}
+
+.plan-card-radio {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--amber-400);
+}
+
+.plan-badge {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--amber-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.plan-card-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--n-200);
+  margin-top: 8px;
+}
+
+.plan-card-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--amber-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.plan-card-period {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--n-500);
+  margin-left: 2px;
+}
+
+.plan-card-savings {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--emerald-400);
+  background: rgba(21, 128, 61, 0.14);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 2px;
+}
+
+.plan-card-limit {
+  font-size: 11px;
+  color: var(--n-500);
+  margin-top: 4px;
+}
+
+.signup-cta {
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.signup-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.signup-cta:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signup-panel,
+  .plan-card,
+  .signup-cta {
+    animation: none;
+    transition: none;
+  }
+}
+
 .hero-mrr {
   margin: 16px;
   padding: 24px 28px;

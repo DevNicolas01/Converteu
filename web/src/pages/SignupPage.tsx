@@ -10,6 +10,8 @@ import { EyeIcon, EyeOffIcon } from "../components/Icons";
 const FAR_FUTURE = new Date();
 FAR_FUTURE.setFullYear(FAR_FUTURE.getFullYear() + 100);
 
+const RECOMMENDED_PLAN: PlanId = "cresce";
+
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
@@ -99,11 +101,71 @@ export default function SignupPage() {
 
   return (
     <div className="auth-screen">
-      <form className="panel auth-panel" onSubmit={handleSubmit}>
+      <form className="panel auth-panel signup-panel" onSubmit={handleSubmit}>
         <h2 className="panel-title">Criar conta</h2>
         <p className="panel-help" style={{ marginTop: 0 }}>
-          Depois de criar a conta, você vai pra tela de pagamento pra ativar a assinatura.
+          Todo plano dá acesso completo: calculadora, propostas com funil, PDF profissional e gráficos de resultados.
         </p>
+
+        <fieldset className="plan-fieldset">
+          <legend className="plan-legend">Escolha seu plano</legend>
+
+          <div className="billing-toggle" role="group" aria-label="Ciclo de cobrança">
+            <button
+              type="button"
+              className={`billing-toggle-btn${billingCycle === "mensal" ? " active" : ""}`}
+              onClick={() => setBillingCycle("mensal")}
+            >
+              Mensal
+            </button>
+            <button
+              type="button"
+              className={`billing-toggle-btn${billingCycle === "anual" ? " active" : ""}`}
+              onClick={() => setBillingCycle("anual")}
+            >
+              Anual <span className="billing-save-badge">2 meses grátis</span>
+            </button>
+          </div>
+
+          <div className="plan-grid">
+            {PLANS.map((p, i) => {
+              const isFree = p.id === "teste";
+              const cyclePrice = isFree ? 0 : PLAN_PRICES[p.id][billingCycle];
+              const monthlyEquivalent = !isFree && billingCycle === "anual" ? cyclePrice / 12 : cyclePrice;
+              const annualSavings = !isFree ? PLAN_PRICES[p.id].mensal * 12 - PLAN_PRICES[p.id].anual : 0;
+              const isSelected = plan === p.id;
+              const isRecommended = p.id === RECOMMENDED_PLAN;
+              return (
+                <label
+                  key={p.id}
+                  className={`plan-card${isSelected ? " selected" : ""}${isRecommended ? " recommended" : ""}`}
+                  style={{ animationDelay: `${i * 70}ms` }}
+                >
+                  {isRecommended && <span className="plan-badge">★ Recomendado</span>}
+                  <input
+                    type="radio"
+                    name="plan"
+                    value={p.id}
+                    checked={isSelected}
+                    onChange={() => setPlan(p.id)}
+                    className="plan-card-radio"
+                    aria-label={p.label}
+                  />
+                  <span className="plan-card-name">{p.label}</span>
+                  <span className="plan-card-price">
+                    {isFree ? "Grátis" : formatBRL(monthlyEquivalent)}
+                    {!isFree && <span className="plan-card-period">/mês</span>}
+                  </span>
+                  {!isFree && billingCycle === "anual" && (
+                    <span className="plan-card-savings">economize {formatBRL(annualSavings)}/ano</span>
+                  )}
+                  <span className="plan-card-limit">{p.limit ? `até ${p.limit} orçamentos/mês` : "orçamentos ilimitados"}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
         <div className="field">
           <label htmlFor="signup-company">Nome da empresa</label>
           <input id="signup-company" className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
@@ -123,47 +185,6 @@ export default function SignupPage() {
             Necessário pra gerar a cobrança da assinatura.
           </p>
         </div>
-        <fieldset className="field" style={{ border: "none", padding: 0, margin: 0 }}>
-          <legend className="panel-help" style={{ padding: 0, marginBottom: 6 }}>
-            Escolha o plano
-          </legend>
-          {PLANS.map((p) => {
-            const price = p.id === "teste" ? 0 : PLAN_PRICES[p.id][billingCycle];
-            return (
-              <label
-                key={p.id}
-                className="input"
-                style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}
-              >
-                <input type="radio" name="plan" value={p.id} checked={plan === p.id} onChange={() => setPlan(p.id)} />
-                <span style={{ flex: 1 }}>
-                  {p.label} <span className="microlabel">({p.limit ? `até ${p.limit}/mês` : "ilimitado"})</span>
-                </span>
-                <strong>
-                  {price === 0
-                    ? "Grátis"
-                    : billingCycle === "anual"
-                      ? `${formatBRL(price)}/ano`
-                      : `${formatBRL(price)}/mês`}
-                </strong>
-              </label>
-            );
-          })}
-        </fieldset>
-        {plan !== "teste" && (
-          <div className="field">
-            <label htmlFor="signup-cycle">Cobrança</label>
-            <select
-              id="signup-cycle"
-              className="input"
-              value={billingCycle}
-              onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
-            >
-              <option value="mensal">Mensal</option>
-              <option value="anual">Anual (10x o valor do mês, com desconto)</option>
-            </select>
-          </div>
-        )}
         <div className="field">
           <label htmlFor="signup-email">E-mail</label>
           <input
@@ -200,7 +221,7 @@ export default function SignupPage() {
             </button>
           </div>
         </div>
-        <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
+        <button className="save-btn signup-cta" type="submit" style={{ width: "100%" }} disabled={submitting}>
           {submitting ? "Criando..." : plan === "teste" ? "Criar conta grátis" : "Criar conta e ir pro pagamento"}
         </button>
         <p className="save-msg" role="alert" aria-live="assertive">
