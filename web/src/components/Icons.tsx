@@ -155,6 +155,43 @@ export function PercentIcon() {
   );
 }
 
+export function InboxIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M22 12h-6l-2 3h-4l-2-3H2"></path>
+      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"></path>
+    </svg>
+  );
+}
+
+export function SendIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+  );
+}
+
+export function CheckCircleIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+  );
+}
+
+export function XCircleIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>
+  );
+}
+
 export function LogoutIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">

@@ -1003,22 +1003,106 @@
   padding-bottom: 10px;
 }
 
-.payment-status {
-  font-size: 12px;
-  font-weight: 600;
-  margin: 6px 0;
+.payment-summary {
+  margin: 8px 0;
 }
 
-.payment-status.paid {
+.payment-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.payment-badge.paid {
+  background: rgba(21, 128, 61, 0.14);
   color: var(--emerald-400);
 }
 
-.payment-status.partial {
+.payment-badge.partial {
+  background: rgba(202, 138, 4, 0.16);
   color: var(--amber-500);
 }
 
-.payment-status.unpaid {
+.payment-badge.unpaid {
+  background: var(--n-800);
   color: var(--n-500);
+}
+
+.payment-summary-amount {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--n-300);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.payment-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--n-800);
+  overflow: hidden;
+}
+
+.payment-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s;
+  background: var(--n-600);
+}
+
+.payment-progress-fill.paid {
+  background: var(--emerald-400);
+}
+
+.payment-progress-fill.partial {
+  background: var(--amber-500);
+}
+
+.funil-col {
+  border-top: 3px solid var(--n-600);
+}
+
+.funil-col-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.funil-col-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.funil-col-icon .icon {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.funil-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--n-300);
+  flex: 1;
+  min-width: 0;
 }
 
 .deal-card-section {
