@@ -3,6 +3,7 @@ import {
   emptyDeal,
   calcDeal,
   computeDataTermino,
+  estimateProductCostByArea,
   formatBRL,
   formatDateBR,
   formatPhoneBR,
@@ -17,6 +18,7 @@ import {
 import { downloadClientPdf, downloadInternalPdf } from "../lib/pdf";
 import PresentationView from "./PresentationView";
 import type { CompanyProfile } from "../lib/db";
+import { TruckIcon, CoffeeIcon, DropletIcon, ParkingIcon, TrashIcon, BoxIcon } from "./Icons";
 
 interface Props {
   initialDeal?: Deal | null;
@@ -259,6 +261,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
             <p className="eyebrow">Transporte, alimentação e apoio</p>
             <div className="cost-group-grid">
               <div className="cost-group">
+                <div className="cost-group-icon" style={{ background: "var(--cat-1)" }}>
+                  <TruckIcon />
+                </div>
                 <p className="cost-group-title">Vale-transporte</p>
                 <div className="cost-group-fields">
                   {field("Qtd./dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
@@ -268,6 +273,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               </div>
 
               <div className="cost-group">
+                <div className="cost-group-icon" style={{ background: "var(--cat-2)" }}>
+                  <CoffeeIcon />
+                </div>
                 <p className="cost-group-title">Alimentação</p>
                 <div className="cost-group-fields">
                   {field("Qtd./dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
@@ -277,6 +285,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               </div>
 
               <div className="cost-group">
+                <div className="cost-group-icon" style={{ background: "var(--cat-3)" }}>
+                  <DropletIcon />
+                </div>
                 <p className="cost-group-title">Combustível</p>
                 <div className="cost-group-fields">
                   {field("Km/litro", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
@@ -287,6 +298,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               </div>
 
               <div className="cost-group">
+                <div className="cost-group-icon" style={{ background: "var(--cat-4)" }}>
+                  <ParkingIcon />
+                </div>
                 <p className="cost-group-title">Estacionamento e pedágio</p>
                 <div className="cost-group-fields">
                   {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
@@ -305,7 +319,27 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
         {step === 3 && (
           <>
-            <p className="eyebrow">Materiais e produtos</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <div className="cost-group-icon" style={{ background: "var(--cat-5)" }}>
+                <BoxIcon />
+              </div>
+              <p className="eyebrow" style={{ margin: 0 }}>
+                Materiais e produtos
+              </p>
+            </div>
+
+            {deal.metragem && (
+              <div className="area-estimate-box">
+                <span>
+                  Estimativa por metragem ({deal.metragem} m² · {deal.clientType})
+                </span>
+                <strong>{formatBRL(estimateProductCostByArea(deal.clientType, num(deal.metragem)))}</strong>
+                <p className="microlabel" style={{ margin: 0, flexBasis: "100%" }}>
+                  Cruzamento de referência com base no tipo de imóvel — não entra na conta sozinho, ajuste os produtos abaixo comparando com esse número.
+                </p>
+              </div>
+            )}
+
             {(deal.produtos || []).length > 0 && (
               <div className="produtos-table">
                 <div className="produtos-row produtos-header">
@@ -342,11 +376,11 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                     <span className="produtos-subtotal">{formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}</span>
                     <button
                       type="button"
-                      className="icon-action-btn danger"
+                      className="icon-action-btn danger produtos-remove-btn"
                       onClick={() => removeProduto(i)}
                       aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
                     >
-                      remover
+                      <TrashIcon />
                     </button>
                   </div>
                 ))}

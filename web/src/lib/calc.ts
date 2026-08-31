@@ -74,6 +74,26 @@ export const CLIENT_TYPES = ["Residência", "Apartamento", "Sala comercial", "Co
 /** Só relevante quando leadSource === "Tráfego pago" — qual plataforma trouxe o lead. */
 export const PAID_TRAFFIC_CHANNELS = ["Google", "Meta"];
 
+/**
+ * Estimativa de gasto de produtos por m², de acordo com o tipo de imóvel — obra/construtora
+ * suja muito mais que uma residência já limpa, por exemplo. São valores de partida pra dar um
+ * cruzamento rápido com o que foi lançado manualmente em "produtos" — ajuste conforme a
+ * experiência real da empresa.
+ */
+export const PRODUCT_RATE_PER_M2: Record<string, number> = {
+  "Residência": 1.5,
+  "Apartamento": 1.5,
+  "Sala comercial": 1.8,
+  "Condomínio": 1.8,
+  "Obra/Construtora": 3.5,
+  "Outro": 1.5,
+};
+
+export function estimateProductCostByArea(clientType: string, metragem: number): number {
+  const rate = PRODUCT_RATE_PER_M2[clientType] ?? PRODUCT_RATE_PER_M2["Outro"];
+  return metragem * rate;
+}
+
 // Funil simplificado: Em aberto -> Aguardando resposta -> Fechado / Perdido.
 export const STAGES = [
   { id: "aberto", label: "Em aberto" },
