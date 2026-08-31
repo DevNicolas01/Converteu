@@ -136,9 +136,13 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
 
   async function handleSaveCompany(data: Omit<CompanyProfile, "logoUrl">, file: File | null) {
     await saveCompanyProfile(accountId, data);
-    if (file) await uploadCompanyLogo(accountId, file);
-    const profile = await getCompanyProfile(accountId);
-    setCompany(profile);
+    // Salva os dados de texto primeiro, independente da logo — assim uma falha só no envio
+    // da imagem (ex: sem internet no momento) não faz parecer que nada foi salvo.
+    setCompany(await getCompanyProfile(accountId));
+    if (file) {
+      await uploadCompanyLogo(accountId, file);
+      setCompany(await getCompanyProfile(accountId));
+    }
     setShowCompanyEditor(false);
   }
 
@@ -239,11 +243,11 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         </div>
       </header>
 
-      {showCompanyEditor && (
+      {showCompanyEditor && company && (
         <Modal onClose={() => setShowCompanyEditor(false)}>
           <CompanySetupForm
             bare
-            initial={company || {}}
+            initial={company}
             onCancel={() => setShowCompanyEditor(false)}
             onSave={handleSaveCompany}
           />

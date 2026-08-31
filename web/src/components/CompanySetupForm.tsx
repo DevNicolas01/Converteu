@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { CompanyProfile } from "../lib/db";
+import { LogoUploadError, type CompanyProfile } from "../lib/db";
 import { formatCpfCnpj } from "../lib/calc";
 
 interface Props {
@@ -29,18 +29,6 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // O perfil pode ainda estar carregando quando o formulário monta (a pessoa clicou em
-  // "Perfil" rápido demais); assim que os dados chegam, preenche os campos de novo.
-  useEffect(() => {
-    setName(initial.companyName || "");
-    setCnpj(initial.cnpj || "");
-    setEndereco(initial.endereco || "");
-    setTelefone(initial.telefone || "");
-    setEmail(initial.email || "");
-    if (!file) setPreviewUrl(initial.logoUrl || null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial.companyName, initial.cnpj, initial.endereco, initial.telefone, initial.email, initial.logoUrl]);
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
@@ -53,7 +41,7 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
       await onSave({ companyName: name.trim(), cnpj: cnpj.trim(), endereco: endereco.trim(), telefone: telefone.trim(), email: email.trim() }, file);
     } catch (err) {
       console.error("Falha ao salvar dados da empresa", err);
-      setMsg("Não foi possível salvar.");
+      setMsg(err instanceof LogoUploadError ? err.message : "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }

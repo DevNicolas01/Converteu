@@ -532,6 +532,76 @@
   height: 100%;
 }
 
+.cost-group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.cost-group {
+  border: 1px solid var(--n-800);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--n-900-40);
+}
+
+.cost-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--n-400);
+  margin: 0 0 10px;
+}
+
+.cost-group-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cost-group-fields .field {
+  margin-bottom: 0;
+}
+
+.cost-group-subtotal {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--amber-500);
+  text-align: right;
+}
+
+.cost-total-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--amber-300);
+  color: var(--amber-500);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cost-total-banner strong {
+  font-size: 17px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.produtos-total-row {
+  font-weight: 700;
+  color: var(--n-200);
+  border-top: 1px solid var(--n-800);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.produtos-total-row .produtos-subtotal {
+  color: var(--amber-500);
+  font-size: 14px;
+}
+
 .material-pct-box {
   max-width: 300px;
 }

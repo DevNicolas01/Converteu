@@ -112,10 +112,18 @@ export async function saveCompanyProfile(accountId: string, data: Omit<CompanyPr
   await setDoc(doc(db, "accounts", accountId, "companyProfile", "profile"), data, { merge: true });
 }
 
+/** Erro específico do upload da logo — deixa quem chama distinguir isso de uma falha geral ao salvar. */
+export class LogoUploadError extends Error {}
+
 export async function uploadCompanyLogo(accountId: string, file: File) {
   const ext = (file.name.split(".").pop() || "png").toLowerCase();
   const fileRef = ref(storage, `company-logos/${accountId}/logo.${ext}`);
-  await uploadBytes(fileRef, file);
+  try {
+    await uploadBytes(fileRef, file);
+  } catch (err) {
+    console.error("Falha ao enviar a logo", err);
+    throw new LogoUploadError("Os outros dados foram salvos, mas não deu pra enviar a logo agora. Tente de novo em instantes.");
+  }
   const logoUrl = await getDownloadURL(fileRef);
   await setDoc(doc(db, "accounts", accountId, "companyProfile", "profile"), { logoUrl }, { merge: true });
   return logoUrl;

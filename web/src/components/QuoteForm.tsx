@@ -257,16 +257,48 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
         {step === 2 && (
           <>
             <p className="eyebrow">Transporte, alimentação e apoio</p>
-            <div className="field-grid">
-              {field("Qtd. vale-transporte/dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
-              {field("Valor do VT (R$)", <input className="input" type="number" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
-              {field("Qtd. almoços/dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
-              {field("Valor do almoço (R$)", <input className="input" type="number" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
-              {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
-              {field("Pedágio (R$)", <input className="input" type="number" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
-              {field("Km/litro do veículo", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
-              {field("Valor do litro (R$)", <input className="input" type="number" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
-              {field("Km rodados/dia", <input className="input" type="number" value={deal.combKmRodar} onChange={(e) => set("combKmRodar", e.target.value)} />, "combKmRodar")}
+            <div className="cost-group-grid">
+              <div className="cost-group">
+                <p className="cost-group-title">Vale-transporte</p>
+                <div className="cost-group-fields">
+                  {field("Qtd./dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
+                  {field("Valor (R$)", <input className="input" type="number" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
+                </div>
+                <p className="cost-group-subtotal">{formatBRL(calc.vtTotal)} no total</p>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Alimentação</p>
+                <div className="cost-group-fields">
+                  {field("Qtd./dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
+                  {field("Valor (R$)", <input className="input" type="number" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
+                </div>
+                <p className="cost-group-subtotal">{formatBRL(calc.almocoTotal)} no total</p>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Combustível</p>
+                <div className="cost-group-fields">
+                  {field("Km/litro", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
+                  {field("Valor do litro (R$)", <input className="input" type="number" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
+                  {field("Km rodados/dia", <input className="input" type="number" value={deal.combKmRodar} onChange={(e) => set("combKmRodar", e.target.value)} />, "combKmRodar")}
+                </div>
+                <p className="cost-group-subtotal">{formatBRL(calc.combustivelTotal)} no total</p>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Estacionamento e pedágio</p>
+                <div className="cost-group-fields">
+                  {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
+                  {field("Pedágio (R$)", <input className="input" type="number" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
+                </div>
+                <p className="cost-group-subtotal">{formatBRL(num(deal.estacionamento) + num(deal.pedagio))} no total</p>
+              </div>
+            </div>
+
+            <div className="cost-total-banner">
+              <span>Total de transporte e apoio</span>
+              <strong>{formatBRL(calc.apoioTotal)}</strong>
             </div>
           </>
         )}
@@ -318,6 +350,13 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                     </button>
                   </div>
                 ))}
+                <div className="produtos-row produtos-total-row">
+                  <span>Total dos produtos</span>
+                  <span></span>
+                  <span></span>
+                  <span className="produtos-subtotal">{formatBRL(calc.custoProdutos)}</span>
+                  <span></span>
+                </div>
               </div>
             )}
             <button type="button" className="icon-action-btn" onClick={addProduto} style={{ marginBottom: 16 }}>
@@ -340,6 +379,11 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <p className="microlabel" style={{ marginTop: 6 }}>
                 Deixe em branco pra calcular automático com base nos produtos informados (agora: {(calc.materialPct * 100).toFixed(0)}%).
               </p>
+            </div>
+
+            <div className="cost-total-banner" style={{ marginTop: 16 }}>
+              <span>Total de materiais (produtos + %)</span>
+              <strong>{formatBRL(calc.materiaisTotal)}</strong>
             </div>
           </>
         )}
