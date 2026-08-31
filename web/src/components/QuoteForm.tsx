@@ -18,7 +18,7 @@ import {
 import { downloadClientPdf, downloadInternalPdf } from "../lib/pdf";
 import PresentationView from "./PresentationView";
 import type { CompanyProfile } from "../lib/db";
-import { TruckIcon, CoffeeIcon, DropletIcon, ParkingIcon, TrashIcon, BoxIcon } from "./Icons";
+import { BuildingIcon, UsersIcon, CreditCardIcon, BoxIcon, PercentIcon, TruckIcon, CoffeeIcon, DropletIcon, ParkingIcon, TrashIcon } from "./Icons";
 
 interface Props {
   initialDeal?: Deal | null;
@@ -29,12 +29,14 @@ interface Props {
 }
 
 const STEPS = [
-  { label: "Obra e cliente" },
-  { label: "Equipe" },
-  { label: "Transporte e apoio" },
-  { label: "Materiais e produtos" },
-  { label: "Custos e margem" },
+  { label: "Obra e cliente", icon: <BuildingIcon />, color: "var(--cat-1)" },
+  { label: "Equipe", icon: <UsersIcon />, color: "var(--cat-2)" },
+  { label: "Transporte e apoio", icon: <CreditCardIcon />, color: "var(--cat-3)" },
+  { label: "Materiais e produtos", icon: <BoxIcon />, color: "var(--cat-5)" },
+  { label: "Custos e margem", icon: <PercentIcon />, color: "var(--cat-6)" },
 ] as const;
+
+const ROLE_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)"];
 
 function field(label: string, input: ReactElement<{ id?: string }>, key: string) {
   const id = `qf-${key}`;
@@ -42,6 +44,20 @@ function field(label: string, input: ReactElement<{ id?: string }>, key: string)
     <div className="field" key={key}>
       <label htmlFor={id}>{label}</label>
       {cloneElement(input, { id })}
+    </div>
+  );
+}
+
+function StepHeader({ index }: { index: number }) {
+  const s = STEPS[index];
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <div className="cost-group-icon" style={{ background: s.color, marginBottom: 0 }}>
+        {s.icon}
+      </div>
+      <p className="eyebrow" style={{ margin: 0 }}>
+        {s.label}
+      </p>
     </div>
   );
 }
@@ -147,77 +163,102 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
         {step === 0 && (
           <>
-            <p className="eyebrow">Obra e cliente</p>
-            <div className="field-grid">
-              {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
-              {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
-              {field(
-                "Tipo de imóvel",
-                <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
-                  {CLIENT_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>,
-                "clientType",
-              )}
-              {field("E-mail do cliente", <input className="input" type="email" value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail")}
-              {field(
-                "WhatsApp do cliente",
-                <input
-                  className="input"
-                  type="tel"
-                  placeholder="Ex: (11) 9 8888-7777"
-                  value={deal.clientePhone}
-                  onChange={(e) => set("clientePhone", formatPhoneBR(e.target.value))}
-                />,
-                "clientePhone",
-              )}
-              {field("Endereço", <input className="input" value={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
-              {field("Responsável pelo serviço", <input className="input" value={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
-              {field(
-                "Como chegou até você",
-                <select className="input" value={deal.leadSource} onChange={(e) => set("leadSource", e.target.value)}>
-                  {LEAD_SOURCES.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>,
-                "leadSource",
-              )}
-              {deal.leadSource === "Tráfego pago" &&
-                field(
-                  "Plataforma do tráfego pago",
-                  <select className="input" value={deal.leadSourcePaidChannel} onChange={(e) => set("leadSourcePaidChannel", e.target.value)}>
-                    <option value="">Selecione</option>
-                    {PAID_TRAFFIC_CHANNELS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>,
-                  "leadSourcePaidChannel",
-                )}
-              {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
-              {field("Dias de serviço", <input className="input" type="number" value={deal.dias} onChange={(e) => set("dias", e.target.value)} />, "dias")}
-              {field("Data de início", <input className="input" type="date" value={deal.dataInicio} onChange={(e) => set("dataInicio", e.target.value)} />, "dataInicio")}
-              {field(
-                "Data prevista para terminar",
-                <input className="input" value={deal.dataTermino ? formatDateBR(deal.dataTermino) : "Preencha início e dias"} disabled />,
-                "dataTermino",
-              )}
-              {field("Data da visita técnica", <input className="input" type="date" value={deal.dataVisitaTecnica} onChange={(e) => set("dataVisitaTecnica", e.target.value)} />, "dataVisitaTecnica")}
+            <StepHeader index={0} />
+
+            <div className="cost-group-grid">
+              <div className="cost-group">
+                <p className="cost-group-title">Cliente</p>
+                <div className="cost-group-fields">
+                  {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
+                  {field(
+                    "Tipo de imóvel",
+                    <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
+                      {CLIENT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>,
+                    "clientType",
+                  )}
+                  {field("E-mail", <input className="input" type="email" value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail")}
+                  {field(
+                    "WhatsApp",
+                    <input
+                      className="input"
+                      type="tel"
+                      placeholder="Ex: (11) 9 8888-7777"
+                      value={deal.clientePhone}
+                      onChange={(e) => set("clientePhone", formatPhoneBR(e.target.value))}
+                    />,
+                    "clientePhone",
+                  )}
+                </div>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Obra e local</p>
+                <div className="cost-group-fields">
+                  {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
+                  {field("Endereço", <input className="input" value={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
+                  {field("Responsável", <input className="input" value={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
+                  {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
+                </div>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Origem do lead</p>
+                <div className="cost-group-fields">
+                  {field(
+                    "Como chegou",
+                    <select className="input" value={deal.leadSource} onChange={(e) => set("leadSource", e.target.value)}>
+                      {LEAD_SOURCES.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>,
+                    "leadSource",
+                  )}
+                  {deal.leadSource === "Tráfego pago" &&
+                    field(
+                      "Plataforma",
+                      <select className="input" value={deal.leadSourcePaidChannel} onChange={(e) => set("leadSourcePaidChannel", e.target.value)}>
+                        <option value="">Selecione</option>
+                        {PAID_TRAFFIC_CHANNELS.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>,
+                      "leadSourcePaidChannel",
+                    )}
+                </div>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Prazo</p>
+                <div className="cost-group-fields">
+                  {field("Dias de serviço", <input className="input" type="number" value={deal.dias} onChange={(e) => set("dias", e.target.value)} />, "dias")}
+                  {field("Data de início", <input className="input" type="date" value={deal.dataInicio} onChange={(e) => set("dataInicio", e.target.value)} />, "dataInicio")}
+                  {field(
+                    "Previsão de término",
+                    <input className="input" value={deal.dataTermino ? formatDateBR(deal.dataTermino) : "Preencha início e dias"} disabled />,
+                    "dataTermino",
+                  )}
+                  {field("Visita técnica", <input className="input" type="date" value={deal.dataVisitaTecnica} onChange={(e) => set("dataVisitaTecnica", e.target.value)} />, "dataVisitaTecnica")}
+                </div>
+              </div>
             </div>
 
-            <div className="field">
-              <label>Observações da vistoria (superfície, sujidade, estado da obra, restrições de acesso etc.)</label>
+            <div className="cost-group" style={{ marginTop: 14 }}>
+              <p className="cost-group-title">Observações da vistoria</p>
               <textarea
                 className="input"
                 rows={3}
                 style={{ resize: "vertical" }}
                 placeholder="Ex: piso porcelanato polido, cimento aderido em toda a área, rejunte epóxi nas pastilhas do banheiro, obra finalizada aguardando entrega."
+                aria-label="Observações da vistoria (superfície, sujidade, estado da obra, restrições de acesso etc.)"
                 value={deal.observacoesVisita}
                 onChange={(e) => set("observacoesVisita", e.target.value)}
               />
@@ -227,38 +268,56 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
         {step === 1 && (
           <>
-            <p className="eyebrow">Equipe</p>
-            <div className="role-grid">
-              {ROLES.map((r) => (
-                <div className="role-card" key={r.key}>
-                  <p id={`role-label-${r.key}`}>{r.label}</p>
-                  <input
-                    className="input"
-                    type="number"
-                    placeholder="Qtd."
-                    aria-label={`Quantidade de ${r.label}`}
-                    aria-describedby={`role-label-${r.key}`}
-                    value={deal.qtd[r.key]}
-                    onChange={(e) => setRole("qtd", r.key, e.target.value)}
-                  />
-                  <input
-                    className="input"
-                    type="number"
-                    placeholder="Diária (R$)"
-                    aria-label={`Diária em reais de ${r.label}`}
-                    aria-describedby={`role-label-${r.key}`}
-                    value={deal.diaria[r.key]}
-                    onChange={(e) => setRole("diaria", r.key, e.target.value)}
-                  />
-                </div>
-              ))}
+            <StepHeader index={1} />
+            <div className="cost-group-grid">
+              {ROLES.map((r, i) => {
+                const subtotal = num(deal.qtd[r.key]) * num(deal.diaria[r.key]) * num(deal.dias);
+                return (
+                  <div className="cost-group" key={r.key}>
+                    <div className="cost-group-icon" style={{ background: ROLE_COLORS[i % ROLE_COLORS.length] }}>
+                      <UsersIcon />
+                    </div>
+                    <p className="cost-group-title">{r.label}</p>
+                    <div className="cost-group-fields">
+                      <div className="field">
+                        <label htmlFor={`role-qtd-${r.key}`}>Qtd.</label>
+                        <input
+                          id={`role-qtd-${r.key}`}
+                          className="input"
+                          type="number"
+                          aria-label={`Quantidade de ${r.label}`}
+                          value={deal.qtd[r.key]}
+                          onChange={(e) => setRole("qtd", r.key, e.target.value)}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor={`role-diaria-${r.key}`}>Diária (R$)</label>
+                        <input
+                          id={`role-diaria-${r.key}`}
+                          className="input"
+                          type="number"
+                          aria-label={`Diária em reais de ${r.label}`}
+                          value={deal.diaria[r.key]}
+                          onChange={(e) => setRole("diaria", r.key, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <p className="cost-group-subtotal">{formatBRL(subtotal)} no total</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="cost-total-banner">
+              <span>Total de equipe</span>
+              <strong>{formatBRL(calc.maoDeObraTotal)}</strong>
             </div>
           </>
         )}
 
         {step === 2 && (
           <>
-            <p className="eyebrow">Transporte, alimentação e apoio</p>
+            <StepHeader index={2} />
             <div className="cost-group-grid">
               <div className="cost-group">
                 <div className="cost-group-icon" style={{ background: "var(--cat-1)" }}>
@@ -319,14 +378,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
         {step === 3 && (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <div className="cost-group-icon" style={{ background: "var(--cat-5)" }}>
-                <BoxIcon />
-              </div>
-              <p className="eyebrow" style={{ margin: 0 }}>
-                Materiais e produtos
-              </p>
-            </div>
+            <StepHeader index={3} />
 
             {deal.metragem && (
               <div className="area-estimate-box">
@@ -424,18 +476,34 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
 
         {step === 4 && (
           <>
-            <p className="eyebrow">Custos administrativos e margem</p>
-            <div className="field-grid">
-              {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
-              {field("Rateio administrativo (R$)", <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />, "rateioAdm")}
-              {field("Valor da nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
-              {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
-              {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
-              {field(
-                "Forçar valor final (R$, opcional)",
-                <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
-                "valorPagamento",
-              )}
+            <StepHeader index={4} />
+            <div className="cost-group-grid">
+              <div className="cost-group">
+                <p className="cost-group-title">Custos administrativos</p>
+                <div className="cost-group-fields">
+                  {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
+                  {field("Rateio ADM (R$)", <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />, "rateioAdm")}
+                  {field("Nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
+                  {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
+                </div>
+              </div>
+
+              <div className="cost-group">
+                <p className="cost-group-title">Margem e preço final</p>
+                <div className="cost-group-fields">
+                  {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
+                  {field(
+                    "Forçar valor final (R$)",
+                    <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
+                    "valorPagamento",
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="cost-total-banner">
+              <span>Preço sugerido</span>
+              <strong>{formatBRL(calc.valorFinal)}</strong>
             </div>
           </>
         )}

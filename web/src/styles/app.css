@@ -555,7 +555,7 @@
 
 .cost-group-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
   margin-bottom: 16px;
 }
@@ -621,8 +621,8 @@
 
 .cost-group-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px 10px;
 }
 
 .cost-group-fields .field {
