@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
@@ -10,6 +12,9 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetError, setResetError] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,6 +26,27 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
       setError("E-mail ou senha inválidos.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setResetError(true);
+      setResetMsg("Digite seu e-mail ali em cima primeiro.");
+      return;
+    }
+    setSendingReset(true);
+    setResetError(false);
+    setResetMsg("");
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetMsg("Enviamos um e-mail com o link pra redefinir sua senha.");
+    } catch (err) {
+      console.error("Falha ao enviar e-mail de redefinição de senha", err);
+      setResetError(true);
+      setResetMsg("Não foi possível enviar. Confira se o e-mail está certo.");
+    } finally {
+      setSendingReset(false);
     }
   }
 
@@ -69,11 +95,19 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
             </button>
           </div>
         </div>
+        <div style={{ textAlign: "right", marginTop: -8, marginBottom: 12 }}>
+          <button type="button" className="link-btn" onClick={handleForgotPassword} disabled={sendingReset}>
+            {sendingReset ? "Enviando..." : "Esqueceu a senha?"}
+          </button>
+        </div>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={submitting}>
           Entrar
         </button>
         <p className="save-msg" role="alert" aria-live="assertive">
           {error}
+        </p>
+        <p className={`save-msg${resetError ? " is-error" : ""}`} role="status" aria-live="polite">
+          {resetMsg}
         </p>
       </form>
     </div>
