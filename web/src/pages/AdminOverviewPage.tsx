@@ -332,7 +332,7 @@ export default function AdminOverviewPage() {
       <header className="topbar">
         <div className="brand-area">
           <div className="logo-container">
-            <img src="/logo.jpeg" alt="Deal Shot" className="company-logo" />
+            <img src="/logo.png" alt="Deal Shot" className="company-logo" />
           </div>
           <div className="brand-info">
             <h1 className="brand">
