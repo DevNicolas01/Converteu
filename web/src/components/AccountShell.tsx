@@ -28,6 +28,11 @@ import { UserIcon, LogoutIcon, RocketIcon } from "./Icons";
 
 type Tab = "calc" | "funil" | "painel";
 
+// Teste de oferta única (ver SignupPage.tsx): esconde o badge de uso ("X/Y orçamentos") e o
+// botão de assinatura no topo enquanto a grade de planos normal fica de lado. Só mude pra
+// true de novo quando os planos voltarem.
+const SHOW_PLAN_UI = false;
+
 export default function AccountShell({ accountId, asAdmin = false }: { accountId: string; asAdmin?: boolean }) {
   const { logout } = useAuth();
   const { confirmDialog, alertDialog } = useDialog();
@@ -273,11 +278,11 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
               Resultados
             </button>
           </nav>
-          {!asAdmin && (
+          {SHOW_PLAN_UI && !asAdmin && (
             <UsageBadge used={usedForLimit} limit={monthlyLimit} periodLabel={limitPeriodLabel} onClick={() => setShowUpgradeModal(true)} />
           )}
           <ThemeToggle />
-          {!asAdmin && (
+          {SHOW_PLAN_UI && !asAdmin && (
             <button className="theme-toggle" title="Assinatura" aria-label="Melhorar assinatura" onClick={() => setShowUpgradeModal(true)}>
               <RocketIcon />
             </button>
