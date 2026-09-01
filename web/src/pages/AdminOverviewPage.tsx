@@ -139,7 +139,9 @@ export default function AdminOverviewPage() {
   const [showCreateTest, setShowCreateTest] = useState(false);
   const [newTestCompany, setNewTestCompany] = useState("");
   const [newTestEmail, setNewTestEmail] = useState("");
-  const [newTestPlan, setNewTestPlan] = useState<string>("teste");
+  // Padrão "sem_limite": conta de teste criada pelo admin é pra demonstração/parceria, não deve
+  // esbarrar no limite de 3 orçamentos do plano Teste normal. O admin pode trocar no formulário.
+  const [newTestPlan, setNewTestPlan] = useState<string>("sem_limite");
   const [creatingTest, setCreatingTest] = useState(false);
   const [createTestMsg, setCreateTestMsg] = useState("");
   const [createTestMsgError, setCreateTestMsgError] = useState(false);
@@ -202,7 +204,7 @@ export default function AdminOverviewPage() {
       setCreateTestMsg("Conta criada! O cliente recebe um e-mail pra definir a senha e já pode entrar.");
       setNewTestCompany("");
       setNewTestEmail("");
-      setNewTestPlan("teste");
+      setNewTestPlan("sem_limite");
       await loadAccounts();
     } catch (e) {
       const err = e as { code?: string; message?: string };

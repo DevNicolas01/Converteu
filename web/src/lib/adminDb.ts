@@ -103,10 +103,10 @@ export async function adminRemoveAdmin(uid: string) {
  * Cria uma conta de cliente na mão (pra demonstração, parceria ou teste guiado) sem passar
  * pela tela de cadastro: mesmo fluxo de auth do adminAddAdmin (usuário criado num app Firebase
  * secundário, senha temporária descartada, e-mail de redefinição enviado pro cliente definir a
- * própria senha). Por padrão entra no plano "teste" e sem vencimento -- é só uma conta pronta
- * pro cliente já abrir e usar.
+ * própria senha). Por padrão entra no plano "sem_limite" e sem vencimento -- sem travar em
+ * nenhum limite de orçamentos -- é só uma conta pronta pro cliente já abrir e usar.
  */
-export async function adminCreateTestAccount(companyName: string, email: string, plan: string = "teste") {
+export async function adminCreateTestAccount(companyName: string, email: string, plan: string = "sem_limite") {
   const uid = await createAuthUserWithoutSignIn(email);
   await setDoc(doc(db, "accounts", uid), {
     companyName: companyName.trim(),
