@@ -1,4 +1,4 @@
-import { cloneElement, useEffect, useMemo, useState, type ReactElement } from "react";
+import { cloneElement, useEffect, useMemo, useState, type InputHTMLAttributes, type ReactElement } from "react";
 import {
   emptyDeal,
   emptyProduto,
@@ -55,12 +55,27 @@ const STEPS = [
 
 const ROLE_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)"];
 
-function field(label: string, input: ReactElement<{ id?: string }>, key: string) {
+function field(label: string, input: ReactElement<{ id?: string }>, key: string, opts?: { wide?: boolean }) {
   const id = `qf-${key}`;
   return (
-    <div className="field" key={key}>
+    <div className={`field${opts?.wide ? " field-wide" : ""}`} key={key}>
       <label htmlFor={id}>{label}</label>
       {cloneElement(input, { id })}
+    </div>
+  );
+}
+
+interface AffixInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  prefix?: string;
+  suffix?: string;
+}
+
+function AffixInput({ prefix, suffix, className, ...rest }: AffixInputProps) {
+  return (
+    <div className="currency-input">
+      {prefix && <span className="currency-prefix">{prefix}</span>}
+      <input className={`input currency-input-field${className ? ` ${className}` : ""}`} {...rest} />
+      {suffix && <span className="currency-suffix">{suffix}</span>}
     </div>
   );
 }
@@ -211,7 +226,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Cliente</p>
                 <div className="cost-group-fields">
-                  {field("Cliente", <input className="input" value={deal.clientName} title={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
+                  {field("Cliente", <input className="input" value={deal.clientName} title={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName", { wide: true })}
                   {field(
                     "Tipo de imóvel",
                     <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
@@ -223,7 +238,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                     </select>,
                     "clientType",
                   )}
-                  {field("E-mail", <input className="input" type="email" value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail")}
+                  {field("E-mail", <input className="input" type="email" title={deal.clienteEmail} value={deal.clienteEmail} onChange={(e) => set("clienteEmail", e.target.value)} />, "clienteEmail", { wide: true })}
                   {field(
                     "WhatsApp",
                     <input
@@ -241,10 +256,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Obra e local</p>
                 <div className="cost-group-fields">
-                  {field("Nome da obra", <input className="input" value={deal.obraNome} title={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
-                  {field("Endereço", <input className="input" value={deal.endereco} title={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
+                  {field("Nome da obra", <input className="input" value={deal.obraNome} title={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome", { wide: true })}
+                  {field("Endereço", <input className="input" value={deal.endereco} title={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco", { wide: true })}
                   {field("Responsável", <input className="input" value={deal.responsavel} title={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
-                  {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
+                  {field("Metragem (m²)", <AffixInput type="number" suffix="m²" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
                 </div>
               </div>
 
@@ -333,11 +348,11 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                         />
                       </div>
                       <div className="field">
-                        <label htmlFor={`role-diaria-${r.key}`}>Diária (R$)</label>
-                        <input
+                        <label htmlFor={`role-diaria-${r.key}`}>Diária</label>
+                        <AffixInput
                           id={`role-diaria-${r.key}`}
-                          className="input"
                           type="number"
+                          prefix="R$"
                           aria-label={`Diária em reais de ${r.label}`}
                           value={deal.diaria[r.key]}
                           onChange={(e) => setRole("diaria", r.key, e.target.value)}
@@ -354,13 +369,13 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <p className="cost-group-title">Encargos e o seu pró-labore</p>
               <div className="cost-group-fields">
                 {field(
-                  "Encargos sobre a equipe (%)",
-                  <input className="input" type="number" value={deal.encargosPct ?? "0"} onChange={(e) => set("encargosPct", e.target.value)} />,
+                  "Encargos sobre a equipe",
+                  <AffixInput type="number" suffix="%" value={deal.encargosPct ?? "0"} onChange={(e) => set("encargosPct", e.target.value)} />,
                   "encargosPct",
                 )}
                 {field(
-                  "Seu pró-labore neste serviço (R$)",
-                  <input className="input" type="number" value={deal.proLabore ?? ""} onChange={(e) => set("proLabore", e.target.value)} />,
+                  "Seu pró-labore neste serviço",
+                  <AffixInput type="number" prefix="R$" value={deal.proLabore ?? ""} onChange={(e) => set("proLabore", e.target.value)} />,
                   "proLabore",
                 )}
               </div>
@@ -389,7 +404,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <p className="cost-group-title">Vale-transporte</p>
                 <div className="cost-group-fields">
                   {field("Qtd./dia", <input className="input" type="number" value={deal.vtQtd} onChange={(e) => set("vtQtd", e.target.value)} />, "vtQtd")}
-                  {field("Valor (R$)", <input className="input" type="number" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
+                  {field("Valor", <AffixInput type="number" prefix="R$" value={deal.vtValor} onChange={(e) => set("vtValor", e.target.value)} />, "vtValor")}
                 </div>
                 <p className="cost-group-subtotal">{formatBRL(calc.vtTotal)} no total</p>
               </div>
@@ -401,7 +416,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <p className="cost-group-title">Alimentação</p>
                 <div className="cost-group-fields">
                   {field("Qtd./dia", <input className="input" type="number" value={deal.almocoQtd} onChange={(e) => set("almocoQtd", e.target.value)} />, "almocoQtd")}
-                  {field("Valor (R$)", <input className="input" type="number" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
+                  {field("Valor", <AffixInput type="number" prefix="R$" value={deal.almocoValor} onChange={(e) => set("almocoValor", e.target.value)} />, "almocoValor")}
                 </div>
                 <p className="cost-group-subtotal">{formatBRL(calc.almocoTotal)} no total</p>
               </div>
@@ -413,7 +428,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <p className="cost-group-title">Combustível</p>
                 <div className="cost-group-fields">
                   {field("Km/litro", <input className="input" type="number" value={deal.combKmPorLitro} onChange={(e) => set("combKmPorLitro", e.target.value)} />, "combKmPorLitro")}
-                  {field("Valor do litro (R$)", <input className="input" type="number" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
+                  {field("Valor do litro", <AffixInput type="number" prefix="R$" value={deal.combValorLitro} onChange={(e) => set("combValorLitro", e.target.value)} />, "combValorLitro")}
                   {field("Km rodados/dia", <input className="input" type="number" value={deal.combKmRodar} onChange={(e) => set("combKmRodar", e.target.value)} />, "combKmRodar")}
                 </div>
                 <p className="cost-group-subtotal">{formatBRL(calc.combustivelTotal)} no total</p>
@@ -425,8 +440,8 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 </div>
                 <p className="cost-group-title">Estacionamento e pedágio</p>
                 <div className="cost-group-fields">
-                  {field("Estacionamento (R$)", <input className="input" type="number" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
-                  {field("Pedágio (R$)", <input className="input" type="number" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
+                  {field("Estacionamento", <AffixInput type="number" prefix="R$" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
+                  {field("Pedágio", <AffixInput type="number" prefix="R$" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
                 </div>
                 <p className="cost-group-subtotal">{formatBRL(num(deal.estacionamento) + num(deal.pedagio))} no total</p>
               </div>
@@ -518,10 +533,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                         `produtoQtd${i}`,
                       )}
                       {field(
-                        "Custo unitário (R$)",
-                        <input
-                          className="input"
+                        "Custo unitário",
+                        <AffixInput
                           type="number"
+                          prefix="R$"
                           aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
                           value={p.valorUnitario}
                           onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
@@ -578,14 +593,14 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Custos fixos do escritório</p>
                 <div className="cost-group-fields">
-                  {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
+                  {field("Visita técnica", <AffixInput type="number" prefix="R$" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
                   {field(
-                    "Custos fixos do escritório (R$)",
-                    <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />,
+                    "Custos fixos do escritório",
+                    <AffixInput type="number" prefix="R$" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />,
                     "rateioAdm",
                   )}
-                  {field("Nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
-                  {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
+                  {field("Nota fiscal", <AffixInput type="number" prefix="R$" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
+                  {field("Imposto", <AffixInput type="number" suffix="%" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
                 </div>
 
                 <button type="button" className="link-btn" style={{ marginTop: 8 }} onClick={() => setShowRateioHelper((s) => !s)}>
@@ -599,10 +614,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                       orçamento carrega sua fatia justa do escritório.
                     </p>
                     <div className="cost-group-fields">
-                      {field("Aluguel (R$/mês)", <input className="input" type="number" value={rateioAluguel} onChange={(e) => setRateioAluguel(e.target.value)} />, "rateioAluguel")}
-                      {field("Água/luz/internet (R$/mês)", <input className="input" type="number" value={rateioContas} onChange={(e) => setRateioContas(e.target.value)} />, "rateioContas")}
-                      {field("Contador (R$/mês)", <input className="input" type="number" value={rateioContador} onChange={(e) => setRateioContador(e.target.value)} />, "rateioContador")}
-                      {field("Outros custos fixos (R$/mês)", <input className="input" type="number" value={rateioOutros} onChange={(e) => setRateioOutros(e.target.value)} />, "rateioOutros")}
+                      {field("Aluguel /mês", <AffixInput type="number" prefix="R$" value={rateioAluguel} onChange={(e) => setRateioAluguel(e.target.value)} />, "rateioAluguel")}
+                      {field("Água/luz/internet /mês", <AffixInput type="number" prefix="R$" value={rateioContas} onChange={(e) => setRateioContas(e.target.value)} />, "rateioContas")}
+                      {field("Contador /mês", <AffixInput type="number" prefix="R$" value={rateioContador} onChange={(e) => setRateioContador(e.target.value)} />, "rateioContador")}
+                      {field("Outros custos fixos /mês", <AffixInput type="number" prefix="R$" value={rateioOutros} onChange={(e) => setRateioOutros(e.target.value)} />, "rateioOutros")}
                       {field(
                         "Quantos serviços você faz por mês",
                         <input className="input" type="number" min={1} value={rateioServicosMes} onChange={(e) => setRateioServicosMes(e.target.value)} />,
@@ -623,16 +638,17 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Margem e preço final</p>
                 <div className="cost-group-fields">
-                  {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
+                  {field("Margem desejada", <AffixInput type="number" suffix="%" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
                   {field(
-                    "Gordura de segurança (%)",
-                    <input className="input" type="number" value={deal.gorduraPct ?? "8"} onChange={(e) => set("gorduraPct", e.target.value)} />,
+                    "Gordura de segurança",
+                    <AffixInput type="number" suffix="%" value={deal.gorduraPct ?? "8"} onChange={(e) => set("gorduraPct", e.target.value)} />,
                     "gorduraPct",
                   )}
                   {field(
-                    "Definir um valor final diferente (R$)",
-                    <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
+                    "Definir um valor final diferente",
+                    <AffixInput type="number" prefix="R$" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
                     "valorPagamento",
+                    { wide: true },
                   )}
                 </div>
                 <p className="microlabel" style={{ marginTop: 8 }}>

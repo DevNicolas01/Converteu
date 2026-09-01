@@ -196,9 +196,9 @@ input, select {
 .panel {
   background: var(--n-900-40);
   border: 1px solid var(--n-800);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: var(--shadow-card);
-  padding: 20px;
+  padding: 22px;
 }
 
 .auth-screen {
@@ -219,7 +219,9 @@ input, select {
 }
 
 .panel-title {
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--n-200);
   margin: 0 0 16px;
 }
@@ -257,14 +259,17 @@ input, select {
   margin: 0 0 12px;
 }
 
-.field { margin-bottom: 14px; }
+.field { margin-bottom: 16px; }
+
+.field-wide { grid-column: 1 / -1; }
 
 .field label, .microlabel {
   display: block;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--n-400);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
 }
 
 .microlabel { font-weight: 400; font-size: 11px; color: var(--n-500); }
@@ -273,16 +278,21 @@ input, select {
   width: 100%;
   min-width: 0;
   background: var(--n-900);
-  border: 1px solid var(--n-800);
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 14px;
+  border: 1.5px solid var(--n-800);
+  border-radius: 8px;
+  padding: 10px 13px;
+  font-size: 14.5px;
   line-height: 1.4;
   color: var(--n-100);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
 }
+.input:hover { border-color: var(--n-700); }
 .input:focus { border-color: var(--amber-400); box-shadow: 0 0 0 3px var(--amber-300); }
+.input::placeholder { color: var(--n-600); }
+.input[type="number"] { font-variant-numeric: tabular-nums; }
+select.input { cursor: pointer; }
+.input:disabled { opacity: 0.65; cursor: not-allowed; }
 
 /* As setinhas nativas de type="number" comem espaço do campo e escondem o fim do que foi
    digitado em valores maiores -- tira as setas (o pessoal não usa mesmo, digita direto) e
@@ -345,14 +355,18 @@ input, select {
   gap: 8px;
   font-weight: 600;
   font-size: 14px;
-  padding: 11px 18px;
-  border-radius: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
 }
 .save-btn {
   background: var(--amber-500);
   color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25);
 }
 .save-btn:hover { background: var(--amber-400); }
+.save-btn:active { transform: scale(0.98); }
+.save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .pdf-btn {
   background: var(--n-900);
@@ -360,6 +374,7 @@ input, select {
   border: 1px solid var(--n-800);
 }
 .pdf-btn:hover { border-color: var(--amber-400); color: var(--amber-400); }
+.pdf-btn:active { transform: scale(0.98); }
 
 .save-msg { font-size: 12px; color: var(--emerald-400); margin-top: 8px; }
 
@@ -408,12 +423,14 @@ input, select {
   min-width: 150px;
   background: var(--n-900-40);
   border: 1px solid var(--n-800);
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow: var(--shadow-card);
+  overflow: hidden;
 }
 .funil-col-head {
-  padding: 10px 12px;
+  padding: 14px 14px;
   border-bottom: 1px solid var(--n-800);
+  background: color-mix(in srgb, var(--col-color, var(--n-600)) 9%, transparent);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -424,20 +441,23 @@ input, select {
   color: var(--n-300);
 }
 .funil-count {
-  font-size: 11px;
+  font-size: 11.5px;
+  font-weight: 700;
   color: #FFFFFF;
   background: var(--n-600);
-  border-radius: 10px;
-  padding: 1px 7px;
+  border-radius: 999px;
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .funil-col-body {
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   min-height: 120px;
-  max-height: min(70vh, 640px);
+  max-height: min(72vh, 680px);
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
@@ -445,14 +465,44 @@ input, select {
 .deal-card {
   background: var(--n-900);
   border: 1px solid var(--n-800);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
 }
-.deal-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; }
-.deal-name { font-size: 14px; font-weight: 600; color: var(--n-200); text-align: left; }
+.deal-card:hover {
+  border-color: var(--n-600);
+  box-shadow: 0 6px 20px rgba(20, 32, 58, 0.09);
+  transform: translateY(-1px);
+}
+.deal-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.deal-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.deal-avatar {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--amber-500);
+}
+.deal-name { font-size: 14.5px; font-weight: 700; color: var(--n-200); text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deal-name:hover { color: var(--amber-400); }
-.deal-meta { font-size: 11px; color: var(--n-500); margin: 2px 0 0; }
-.deal-value { font-size: 13px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--amber-500); margin-top: 4px; }
+.deal-meta { font-size: 11.5px; color: var(--n-500); margin: 6px 0 0; }
+.deal-value {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber-500);
+  margin-top: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .deal-stage-select {
   margin-top: 8px;
   width: 100%;

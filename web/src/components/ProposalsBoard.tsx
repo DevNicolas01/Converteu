@@ -117,12 +117,19 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
     onSetPagamento(deal, patch);
   }
 
+  const initial = (deal.clientName || "?").trim().charAt(0).toUpperCase();
+
   return (
     <div className={`deal-card${isDecided ? " compact" : ""}`}>
       <div className="deal-card-top">
-        <button type="button" className="deal-name" onClick={() => onEdit(deal)}>
-          {deal.clientName || "Sem nome"}
-        </button>
+        <div className="deal-name-row">
+          <span className="deal-avatar" aria-hidden="true">
+            {initial}
+          </span>
+          <button type="button" className="deal-name" title={deal.clientName || "Sem nome"} onClick={() => onEdit(deal)}>
+            {deal.clientName || "Sem nome"}
+          </button>
+        </div>
         <span className="deal-value">{formatBRL(deal.valorFinal)}</span>
       </div>
       {deal.stage === "aguardando" && sentDays !== null && <p className="deal-meta">Enviada há {sentDays} dia(s)</p>}
@@ -387,7 +394,12 @@ export default function ProposalsBoard(props: Props) {
           const totalValue = items.reduce((s, d) => s + num(d.valorFinal), 0);
           const meta = STAGE_META[stage.id];
           return (
-            <section className="funil-col" key={stage.id} aria-label={`Coluna ${stage.label}`} style={{ borderTopColor: meta.color }}>
+            <section
+              className="funil-col"
+              key={stage.id}
+              aria-label={`Coluna ${stage.label}`}
+              style={{ borderTopColor: meta.color, ["--col-color" as string]: meta.color }}
+            >
               <div className="funil-col-head">
                 <div className="funil-col-icon" style={{ background: meta.color }}>
                   {meta.icon}
