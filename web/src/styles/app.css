@@ -260,6 +260,54 @@
   margin: 0 0 20px;
 }
 
+/* Oferta única de lançamento (teste de venda) -- substitui a grade de planos enquanto os
+   planos normais ficam de lado. */
+.offer-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 20px 16px;
+  margin-bottom: 20px;
+  border: 2px solid var(--amber-500);
+  border-radius: 14px;
+  background: linear-gradient(160deg, var(--amber-300) 0%, transparent 70%);
+  animation: plan-card-in 0.4s ease both;
+}
+
+.offer-card-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--amber-500);
+  background: var(--n-900);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+.offer-card-price {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--amber-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.offer-card-period {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--n-500);
+  margin-left: 3px;
+}
+
+.offer-card-note {
+  font-size: 12px;
+  color: var(--n-400);
+  margin-top: 2px;
+}
+
 .plan-legend {
   font-size: 13px;
   font-weight: 700;

@@ -4,14 +4,14 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { saveCompanyProfile } from "../lib/db";
-import { formatCpfCnpj, type PlanId, type BillingCycle } from "../lib/calc";
+import { formatCpfCnpj, formatBRL } from "../lib/calc";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
-import PlanPicker from "../components/PlanPicker";
 
-const FAR_FUTURE = new Date();
-FAR_FUTURE.setFullYear(FAR_FUTURE.getFullYear() + 100);
-
-const RECOMMENDED_PLAN: PlanId = "cresce";
+// Teste de oferta: preço único, sem planos/limites, pra validar se o app vende antes de
+// reativar a grade de planos normal (Start/Converte/Ilimitado). O checkout roda na Kiwify em
+// vez do Asaas -- assim que o Nicolas mandar o link, cola aqui.
+const OFERTA_PRECO = 27.9;
+const KIWIFY_CHECKOUT_URL = "";
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
@@ -19,8 +19,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [plan, setPlan] = useState<PlanId>("start");
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("mensal");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -42,18 +40,20 @@ export default function SignupPage() {
     setError("");
     setSubmitting(true);
 
-    let uid: string;
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      uid = cred.user.uid;
+      const uid = cred.user.uid;
       await setDoc(doc(db, "accounts", uid), {
         companyName: companyName.trim(),
         email: email.trim(),
         ownerUid: uid,
-        plan,
-        billingCycle,
-        status: plan === "teste" ? "active" : "pending_payment",
-        subscriptionExpiresAt: plan === "teste" ? Timestamp.fromDate(FAR_FUTURE) : null,
+        // "sem_limite" pra não travar orçamento nenhum durante o teste da oferta -- sem
+        // cobrança automática ainda, então fica "pending_payment" até confirmar o pagamento
+        // na Kiwify e ativar a conta pelo painel admin.
+        plan: "sem_limite",
+        billingCycle: "mensal",
+        status: "pending_payment",
+        subscriptionExpiresAt: null,
         createdAt: Timestamp.now(),
       });
       // Já aproveita o nome e o CNPJ/CPF que ele acabou de digitar, pra não pedir de novo
@@ -71,31 +71,11 @@ export default function SignupPage() {
       return;
     }
 
-    if (plan === "teste") {
-      navigate("/");
-      return;
-    }
-
-    // A conta já existe nesse ponto (login + doc criados). Se o pagamento falhar aqui,
-    // não é mais um erro de cadastro — manda pro app, que mostra a tela de "Assinar agora".
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: uid,
-          email: email.trim(),
-          name: companyName.trim(),
-          cpfCnpj: cpfCnpj.replace(/\D/g, ""),
-          plan,
-          billingCycle,
-        }),
-      });
-      if (!res.ok) throw new Error("Falha ao iniciar pagamento");
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch (err) {
-      console.error("Conta criada, mas falhou ao iniciar o pagamento", err);
+    // A conta já existe nesse ponto (login + doc criados) -- se não tiver link da Kiwify
+    // configurado ainda, manda pro app, que mostra a tela de "assinatura pendente".
+    if (KIWIFY_CHECKOUT_URL) {
+      window.location.href = KIWIFY_CHECKOUT_URL;
+    } else {
       navigate("/");
     }
   }
@@ -105,19 +85,17 @@ export default function SignupPage() {
       <form className="panel auth-panel signup-panel" onSubmit={handleSubmit}>
         <h2 className="panel-title">Criar conta</h2>
         <p className="panel-help" style={{ marginTop: 0 }}>
-          Todo plano dá acesso completo: calculadora, propostas com funil, PDF profissional e gráficos de resultados.
+          Acesso completo: calculadora, propostas com funil, PDF profissional e gráficos de resultados.
         </p>
 
-        <fieldset className="plan-fieldset">
-          <legend className="plan-legend">Escolha seu plano</legend>
-          <PlanPicker
-            plan={plan}
-            billingCycle={billingCycle}
-            onChangePlan={setPlan}
-            onChangeBillingCycle={setBillingCycle}
-            recommendedPlanId={RECOMMENDED_PLAN}
-          />
-        </fieldset>
+        <div className="offer-card">
+          <span className="offer-card-badge">Oferta de lançamento</span>
+          <span className="offer-card-price">
+            {formatBRL(OFERTA_PRECO)}
+            <span className="offer-card-period">/mês</span>
+          </span>
+          <span className="offer-card-note">Sem limite de orçamentos, sem pegadinha.</span>
+        </div>
 
         <div className="field">
           <label htmlFor="signup-company">Nome da empresa</label>
@@ -135,7 +113,7 @@ export default function SignupPage() {
             required
           />
           <p className="panel-help" style={{ margin: "4px 0 0" }}>
-            Necessário pra gerar a cobrança da assinatura.
+            Necessário pra gerar a cobrança.
           </p>
         </div>
         <div className="field">
@@ -175,7 +153,7 @@ export default function SignupPage() {
           </div>
         </div>
         <button className="save-btn signup-cta" type="submit" style={{ width: "100%" }} disabled={submitting}>
-          {submitting ? "Criando..." : plan === "teste" ? "Criar conta grátis" : "Criar conta e ir pro pagamento"}
+          {submitting ? "Criando..." : "Criar conta e ir pro pagamento"}
         </button>
         <p className="save-msg" role="alert" aria-live="assertive">
           {error}
