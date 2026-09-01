@@ -8,14 +8,14 @@ type BillingCycle = "mensal" | "anual";
 // empacota imports de fora da pasta api/, cada function é transpilada isoladamente.
 const PLAN_LABELS: Record<PlanId, string> = {
   start: "Start",
-  cresce: "Cresce",
-  sem_limite: "Sem Limite",
+  cresce: "Converte",
+  sem_limite: "Ilimitado",
 };
 
 const PLAN_PRICES: Record<PlanId, Record<BillingCycle, number>> = {
-  start: { mensal: 14.9, anual: 149 },
-  cresce: { mensal: 24.9, anual: 249 },
-  sem_limite: { mensal: 39.9, anual: 399 },
+  start: { mensal: 24.9, anual: 249 },
+  cresce: { mensal: 39.9, anual: 399 },
+  sem_limite: { mensal: 59.9, anual: 599 },
 };
 
 function getDb(): Firestore {

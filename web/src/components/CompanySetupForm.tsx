@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { LogoUploadError, type CompanyProfile } from "../lib/db";
 import { formatCpfCnpj } from "../lib/calc";
 
@@ -17,17 +17,18 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
   const [telefone, setTelefone] = useState(initial.telefone || "");
   const [email, setEmail] = useState(initial.email || "");
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(initial.logoUrl || null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Deriva a prévia a partir do arquivo escolhido, em vez de guardar a URL num state à parte
+  // (que exigia um efeito só pra sincronizar) -- o efeito abaixo só cuida da revogação.
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : initial.logoUrl || null), [file, initial.logoUrl]);
+
   useEffect(() => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    return () => URL.revokeObjectURL(previewUrl!);
+  }, [file, previewUrl]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

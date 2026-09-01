@@ -162,8 +162,8 @@ export function emptyDeal(): Deal {
 export const PLANS = [
   { id: "teste", label: "Teste", limit: 3 },
   { id: "start", label: "Start", limit: 15 },
-  { id: "cresce", label: "Cresce", limit: 40 },
-  { id: "sem_limite", label: "Sem Limite", limit: null },
+  { id: "cresce", label: "Converte", limit: 40 },
+  { id: "sem_limite", label: "Ilimitado", limit: null },
 ] as const;
 export type PlanId = (typeof PLANS)[number]["id"];
 
@@ -171,9 +171,9 @@ export type BillingCycle = "mensal" | "anual";
 
 /** Preços fixos dos planos pagos (o Teste é sempre gratuito, não passa pelo Asaas). */
 export const PLAN_PRICES: Record<Exclude<PlanId, "teste">, Record<BillingCycle, number>> = {
-  start: { mensal: 14.9, anual: 149 },
-  cresce: { mensal: 24.9, anual: 249 },
-  sem_limite: { mensal: 39.9, anual: 399 },
+  start: { mensal: 24.9, anual: 249 },
+  cresce: { mensal: 39.9, anual: 399 },
+  sem_limite: { mensal: 59.9, anual: 599 },
 };
 
 /** Limite de orçamentos/mês do plano (null = ilimitado; plano desconhecido/antigo = sem limite). */

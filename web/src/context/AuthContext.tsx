@@ -1,22 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  type User,
-} from "firebase/auth";
+import { useEffect, useState, type ReactNode } from "react";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-
-interface AuthState {
-  user: User | null;
-  loading: boolean;
-  isAdmin: boolean;
-  login: (email: string, senha: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthState | null>(null);
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -60,10 +46,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return <AuthContext.Provider value={{ user, loading, isAdmin, login, logout }}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth precisa estar dentro de <AuthProvider>");
-  return ctx;
 }

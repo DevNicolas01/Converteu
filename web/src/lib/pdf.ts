@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { calcDeal, formatBRL, formatDateBR, type Deal } from "./calc";
 import type { CompanyProfile } from "./db";
 
@@ -33,13 +32,17 @@ function fitBox(natW: number, natH: number, maxW: number, maxH: number) {
   return { w: natW * scale, h: natH * scale };
 }
 
-function buildProposalDoc(
+// jsPDF só é importado quando alguém realmente gera um PDF -- carregá-lo de cara no bundle
+// principal engordava o JS inicial de todo mundo por causa de uma ação que a maioria das
+// visitas nunca usa.
+async function buildProposalDoc(
   deal: Deal,
   company: CompanyProfile,
   obraNumero: number,
   imgInfo: { width: number; height: number; img: HTMLImageElement } | null,
   includeCosts: boolean,
 ) {
+  const { jsPDF } = await import("jspdf");
   const companyName = company.companyName || "Sua empresa";
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const calc = calcDeal(deal);

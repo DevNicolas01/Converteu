@@ -8,18 +8,22 @@ import {
   getCompanyProfile,
   saveCompanyProfile,
   uploadCompanyLogo,
+  ProposalLimitError,
   type AccountStatus,
   type CompanyProfile,
 } from "../lib/db";
-import { useAuth } from "../context/AuthContext";
-import { isThisMonth, planLimit, PLANS, type Deal } from "../lib/calc";
+import { useAuth } from "../context/useAuth";
+import { isThisMonth, planLimit, PLANS, type Deal, type PlanId, type BillingCycle } from "../lib/calc";
 import QuoteForm from "./QuoteForm";
 import ProposalsBoard from "./ProposalsBoard";
 import SalesOverview from "./SalesOverview";
 import CompanySetupForm from "./CompanySetupForm";
 import ThemeToggle from "./ThemeToggle";
 import Modal from "./Modal";
-import { UserIcon, LogoutIcon } from "./Icons";
+import UsageBadge from "./UsageBadge";
+import LimitModal from "./LimitModal";
+import UpgradeModal from "./UpgradeModal";
+import { UserIcon, LogoutIcon, RocketIcon } from "./Icons";
 
 type Tab = "calc" | "funil" | "painel";
 
@@ -33,6 +37,8 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   const [tab, setTab] = useState<Tab>("calc");
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   async function loadAll() {
     const s = await getAccountStatus(accountId);
@@ -152,15 +158,27 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     if (deal.id) {
       await updateProposal(accountId, deal.id, deal);
     } else {
+      // Checagem só pra dar feedback rápido sem round-trip -- quem garante o limite de
+      // verdade é o /api/create-proposal, do lado do servidor.
       const limit = planLimit(status?.plan);
       const usados = deals.filter((d) => isThisMonth(d.createdAt)).length;
       if (limit != null && usados >= limit) {
-        alert(
-          `Você atingiu o limite de ${limit} orçamentos neste mês do plano ${PLANS.find((p) => p.id === status?.plan)?.label || "atual"}. Faça upgrade pra continuar criando orçamentos.`,
-        );
+        setShowLimitModal(true);
         return;
       }
-      await createProposal(accountId, { ...deal, obraNumero: deals.length + 1 });
+      // Maior obraNumero já usado + 1, em vez de deals.length + 1 -- senão, depois de
+      // excluir uma proposta, o próximo orçamento criado repetia o número de outro já existente.
+      const nextObraNumero = deals.reduce((max, d) => Math.max(max, d.obraNumero || 0), 0) + 1;
+      try {
+        await createProposal(accountId, { ...deal, obraNumero: nextObraNumero });
+      } catch (err) {
+        if (err instanceof ProposalLimitError) {
+          setShowLimitModal(true);
+        } else {
+          alert("Não foi possível criar o orçamento. Tente de novo.");
+        }
+        return;
+      }
     }
     setEditingDeal(null);
     const proposals = await listProposals(accountId);
@@ -193,6 +211,11 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     await deleteProposal(accountId, id);
     setDeals((ds) => ds.filter((d) => d.id !== id));
   }
+
+  const planId = status.plan as PlanId | undefined;
+  const monthlyLimit = planLimit(planId);
+  const usedThisMonth = deals.filter((d) => isThisMonth(d.createdAt)).length;
+  const currentPlanLabel = PLANS.find((p) => p.id === planId)?.label || "atual";
 
   return (
     <div id="app">
@@ -231,7 +254,13 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
               Resultados
             </button>
           </nav>
+          {!asAdmin && <UsageBadge used={usedThisMonth} limit={monthlyLimit} onClick={() => setShowUpgradeModal(true)} />}
           <ThemeToggle />
+          {!asAdmin && (
+            <button className="theme-toggle" title="Assinatura" aria-label="Melhorar assinatura" onClick={() => setShowUpgradeModal(true)}>
+              <RocketIcon />
+            </button>
+          )}
           <button className="theme-toggle" title="Perfil" aria-label="Perfil" onClick={() => setShowCompanyEditor(true)}>
             <UserIcon />
           </button>
@@ -252,6 +281,31 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
             onSave={handleSaveCompany}
           />
         </Modal>
+      )}
+
+      {showLimitModal && (
+        <LimitModal
+          used={usedThisMonth}
+          limit={monthlyLimit || usedThisMonth}
+          planLabel={currentPlanLabel}
+          onUpgrade={() => {
+            setShowLimitModal(false);
+            setShowUpgradeModal(true);
+          }}
+          onClose={() => setShowLimitModal(false)}
+        />
+      )}
+
+      {showUpgradeModal && !asAdmin && (
+        <UpgradeModal
+          accountId={accountId}
+          email={status.email || ""}
+          companyName={company?.companyName || status.companyName}
+          cnpj={company?.cnpj}
+          currentPlan={(planId || "start") as PlanId}
+          currentBillingCycle={(status.billingCycle as BillingCycle) || "mensal"}
+          onClose={() => setShowUpgradeModal(false)}
+        />
       )}
 
       <main className="main" id="main-content">

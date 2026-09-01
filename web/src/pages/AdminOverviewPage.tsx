@@ -17,7 +17,7 @@ import {
   type AdminCompanyProfile,
   type AdminEntry,
 } from "../lib/adminDb";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import ThemeToggle from "../components/ThemeToggle";
 import { LogoutIcon } from "../components/Icons";
 

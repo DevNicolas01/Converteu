@@ -39,21 +39,20 @@ export function CircleChart({ data, hole = 0 }: { data: { label: string; value: 
   // (ponto inicial == ponto final) e o SVG nao desenha nada.
   const isSingleSlice = visible.length === 1;
 
-  let angle = -90;
-  const slices = visible.map((d) => {
+  const toXY = (deg: number): [number, number] => {
+    const rad = (deg * Math.PI) / 180;
+    return [r + r * Math.cos(rad), r + r * Math.sin(rad)];
+  };
+  const slices = visible.reduce<Array<(typeof visible)[number] & { frac: number; end: number; path: string }>>((acc, d) => {
+    const start = acc.length ? acc[acc.length - 1].end : -90;
     const frac = d.value / total;
-    const start = angle;
-    const end = angle + frac * 360;
-    angle = end;
+    const end = start + frac * 360;
     const largeArc = end - start > 180 ? 1 : 0;
-    const toXY = (deg: number): [number, number] => {
-      const rad = (deg * Math.PI) / 180;
-      return [r + r * Math.cos(rad), r + r * Math.sin(rad)];
-    };
     const [x1, y1] = toXY(start);
     const [x2, y2] = toXY(end);
-    return { ...d, frac, path: `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z` };
-  });
+    acc.push({ ...d, frac, end, path: `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z` });
+    return acc;
+  }, []);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>

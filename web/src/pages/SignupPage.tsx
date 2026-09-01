@@ -4,8 +4,9 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { saveCompanyProfile } from "../lib/db";
-import { PLANS, PLAN_PRICES, formatBRL, formatCpfCnpj, type PlanId, type BillingCycle } from "../lib/calc";
+import { formatCpfCnpj, type PlanId, type BillingCycle } from "../lib/calc";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
+import PlanPicker from "../components/PlanPicker";
 
 const FAR_FUTURE = new Date();
 FAR_FUTURE.setFullYear(FAR_FUTURE.getFullYear() + 100);
@@ -109,61 +110,13 @@ export default function SignupPage() {
 
         <fieldset className="plan-fieldset">
           <legend className="plan-legend">Escolha seu plano</legend>
-
-          <div className="billing-toggle" role="group" aria-label="Ciclo de cobrança">
-            <button
-              type="button"
-              className={`billing-toggle-btn${billingCycle === "mensal" ? " active" : ""}`}
-              onClick={() => setBillingCycle("mensal")}
-            >
-              Mensal
-            </button>
-            <button
-              type="button"
-              className={`billing-toggle-btn${billingCycle === "anual" ? " active" : ""}`}
-              onClick={() => setBillingCycle("anual")}
-            >
-              Anual <span className="billing-save-badge">2 meses grátis</span>
-            </button>
-          </div>
-
-          <div className="plan-grid">
-            {PLANS.map((p, i) => {
-              const isFree = p.id === "teste";
-              const cyclePrice = isFree ? 0 : PLAN_PRICES[p.id][billingCycle];
-              const monthlyEquivalent = !isFree && billingCycle === "anual" ? cyclePrice / 12 : cyclePrice;
-              const annualSavings = !isFree ? PLAN_PRICES[p.id].mensal * 12 - PLAN_PRICES[p.id].anual : 0;
-              const isSelected = plan === p.id;
-              const isRecommended = p.id === RECOMMENDED_PLAN;
-              return (
-                <label
-                  key={p.id}
-                  className={`plan-card${isSelected ? " selected" : ""}${isRecommended ? " recommended" : ""}`}
-                  style={{ animationDelay: `${i * 70}ms` }}
-                >
-                  {isRecommended && <span className="plan-badge">★ Recomendado</span>}
-                  <input
-                    type="radio"
-                    name="plan"
-                    value={p.id}
-                    checked={isSelected}
-                    onChange={() => setPlan(p.id)}
-                    className="plan-card-radio"
-                    aria-label={p.label}
-                  />
-                  <span className="plan-card-name">{p.label}</span>
-                  <span className="plan-card-price">
-                    {isFree ? "Grátis" : formatBRL(monthlyEquivalent)}
-                    {!isFree && <span className="plan-card-period">/mês</span>}
-                  </span>
-                  {!isFree && billingCycle === "anual" && (
-                    <span className="plan-card-savings">economize {formatBRL(annualSavings)}/ano</span>
-                  )}
-                  <span className="plan-card-limit">{p.limit ? `até ${p.limit} orçamentos/mês` : "orçamentos ilimitados"}</span>
-                </label>
-              );
-            })}
-          </div>
+          <PlanPicker
+            plan={plan}
+            billingCycle={billingCycle}
+            onChangePlan={setPlan}
+            onChangeBillingCycle={setBillingCycle}
+            recommendedPlanId={RECOMMENDED_PLAN}
+          />
         </fieldset>
 
         <div className="field">

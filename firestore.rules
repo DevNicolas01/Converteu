@@ -21,11 +21,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == accountId;
     }
 
-    function hasActiveSubscription(accountId) {
-      let acc = get(/databases/$(database)/documents/accounts/$(accountId)).data;
-      return acc.status == "active" && acc.subscriptionExpiresAt > request.time;
-    }
-
     match /accounts/{accountId} {
       allow read: if isAdmin() || ownsAccount(accountId);
       // Cadastro self-service: a própria pessoa cria sua conta, mas só como "pending_payment"
@@ -49,7 +44,11 @@ service cloud.firestore {
 
       match /proposals/{proposalId} {
         allow read: if isAdmin() || ownsAccount(accountId);
-        allow create: if isAdmin() || (ownsAccount(accountId) && hasActiveSubscription(accountId));
+        // Criação só via /api/create-proposal (Admin SDK, ignora regras): é lá que o limite
+        // mensal do plano é checado de verdade -- regras não conseguem contar quantos
+        // documentos já existem numa subcoleção, então permitir ownsAccount() aqui deixaria
+        // qualquer pessoa com o SDK do Firebase criar orçamentos além do plano contratado.
+        allow create: if isAdmin();
         allow update, delete: if isAdmin() || ownsAccount(accountId);
       }
 

@@ -3,14 +3,13 @@ import {
   doc,
   getDoc,
   getDocs,
-  addDoc,
   updateDoc,
   deleteDoc,
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { auth, db, storage } from "./firebase";
 import type { Deal } from "./calc";
 
 export interface AccountStatus {
@@ -75,14 +74,29 @@ export async function listProposals(accountId: string) {
   return snap.docs.map((d) => fromProposalDoc(d.id, d.data()));
 }
 
+/** Erro específico do limite de orçamentos/mês do plano — deixa quem chama mostrar uma mensagem própria. */
+export class ProposalLimitError extends Error {}
+
+/**
+ * Cria a proposta via /api/create-proposal (Admin SDK) em vez de escrever direto no Firestore:
+ * é lá que o limite mensal do plano é validado de verdade, já que as regras de segurança não
+ * conseguem contar quantos documentos já existem numa subcoleção.
+ */
 export async function createProposal(accountId: string, dealLike: Deal) {
-  const payload = {
-    ...toProposalPayload(dealLike),
-    criadoEm: serverTimestamp(),
-    atualizadoEm: serverTimestamp(),
-  };
-  const ref2 = await addDoc(proposalsCol(accountId), payload);
-  return ref2.id;
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error("Não autenticado.");
+  const res = await fetch("/api/create-proposal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ accountId, payload: toProposalPayload(dealLike) }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (res.status === 403) throw new ProposalLimitError(text || "Limite do plano atingido.");
+    throw new Error(text || "Falha ao criar proposta.");
+  }
+  const { id } = (await res.json()) as { id: string };
+  return id;
 }
 
 export async function updateProposal(accountId: string, id: string, dealLike: Deal) {

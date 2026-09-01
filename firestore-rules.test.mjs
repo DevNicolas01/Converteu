@@ -100,19 +100,29 @@ test("bloqueio de campos sensíveis pelo cliente comum", async (t) => {
   await testEnv.cleanup();
 });
 
-test("assinatura vencida bloqueia nova proposta", async (t) => {
+test("criação de proposta só acontece via /api/create-proposal (Admin SDK)", async (t) => {
   await setup();
   await seed();
 
-  await t.test("cliente com assinatura vencida não cria proposta", async () => {
+  // O limite mensal do plano é validado nessa function, não nas regras (regras não contam
+  // documentos de uma subcoleção) — por isso a escrita direta no Firestore fica bloqueada
+  // pra qualquer cliente comum, tenha ele assinatura ativa ou vencida.
+  await t.test("cliente com assinatura ativa não cria proposta direto no Firestore", async () => {
+    const ctx = testEnv.authenticatedContext("userA", { accountId: "accA" });
+    await assertFails(
+      ctx.firestore().collection("accounts/accA/proposals").add({ clienteNome: "X", status: "em_andamento", valor: 100 })
+    );
+  });
+
+  await t.test("cliente com assinatura vencida também não cria proposta direto", async () => {
     const ctx = testEnv.authenticatedContext("userExpired", { accountId: "accExpired" });
     await assertFails(
       ctx.firestore().collection("accounts/accExpired/proposals").add({ clienteNome: "X", status: "em_andamento", valor: 100 })
     );
   });
 
-  await t.test("cliente com assinatura ativa cria proposta normalmente", async () => {
-    const ctx = testEnv.authenticatedContext("userA", { accountId: "accA" });
+  await t.test("admin cria proposta em qualquer conta", async () => {
+    const ctx = testEnv.authenticatedContext("adminUser", { admin: true });
     await assertSucceeds(
       ctx.firestore().collection("accounts/accA/proposals").add({ clienteNome: "X", status: "em_andamento", valor: 100 })
     );

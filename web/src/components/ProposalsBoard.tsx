@@ -7,6 +7,11 @@ import PresentationView from "./PresentationView";
 import type { CompanyProfile } from "../lib/db";
 import { InboxIcon, SendIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon } from "./Icons";
 
+// Formas de pagamento recebidas à vista/na hora -- ao escolher uma delas, já preenchemos
+// o valor recebido como o valor total, porque na prática ninguém digita esse valor manualmente.
+// "Boleto" e "Parcelado" ficam de fora: o dinheiro pode levar dias pra cair ou vir em partes.
+const AUTO_FULL_PAYMENT_METHODS = new Set(["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Transferência"]);
+
 const STAGE_META: Record<string, { icon: ReactElement; color: string }> = {
   aberto: { icon: <InboxIcon />, color: "var(--n-600)" },
   aguardando: { icon: <SendIcon />, color: "var(--amber-400)" },
@@ -75,6 +80,16 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
   const sentDays = daysSince(deal.sentAt);
   const stageLabel = STAGES.find((s) => s.id === deal.stage)?.label || deal.stage;
   const placeLabel = deal.obraNome || deal.endereco || "";
+
+  // Quem fecha a venda escolhe a forma de pagamento, mas quase nunca digita o valor recebido --
+  // pra formas pagas à vista, já cravamos o valor total automaticamente (dá pra corrigir depois).
+  function handleFormaPagamentoChange(value: string) {
+    const patch: Partial<Pick<Deal, "formaPagamento" | "valorPago">> = { formaPagamento: value };
+    if (AUTO_FULL_PAYMENT_METHODS.has(value) && valorFinalNum > 0) {
+      patch.valorPago = String(valorFinalNum);
+    }
+    onSetPagamento(deal, patch);
+  }
 
   return (
     <div className={`deal-card${isDecided ? " compact" : ""}`}>
@@ -156,7 +171,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                     id={formaPagamentoId}
                     className="input"
                     value={deal.formaPagamento}
-                    onChange={(e) => onSetPagamento(deal, { formaPagamento: e.target.value })}
+                    onChange={(e) => handleFormaPagamentoChange(e.target.value)}
                   >
                     <option value="">Selecione</option>
                     {FORMAS_PAGAMENTO.map((f) => (
@@ -177,6 +192,23 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                   />
                 </div>
               </div>
+              {valorFinalNum > 0 && (
+                <div className="payment-quick-actions">
+                  <button type="button" className="quick-chip" onClick={() => onSetPagamento(deal, { valorPago: String(valorFinalNum) })}>
+                    Recebi tudo
+                  </button>
+                  <button
+                    type="button"
+                    className="quick-chip"
+                    onClick={() => onSetPagamento(deal, { valorPago: (valorFinalNum / 2).toFixed(2) })}
+                  >
+                    Recebi metade
+                  </button>
+                  <button type="button" className="quick-chip" onClick={() => onSetPagamento(deal, { valorPago: "0" })}>
+                    Nada ainda
+                  </button>
+                </div>
+              )}
               {paymentStatus === "partial" && (
                 <p className="microlabel" style={{ marginTop: 8, marginBottom: 0 }}>
                   Falta receber: <strong>{formatBRL(valorFinalNum - valorPagoNum)}</strong>

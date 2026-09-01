@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
 export default function LoginPage({ adminHint = false }: { adminHint?: boolean }) {
