@@ -2,15 +2,29 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { LogoUploadError, type CompanyProfile } from "../lib/db";
 import { formatCpfCnpj } from "../lib/calc";
 
+/** Lê o arquivo como data URL (base64) -- usado pra logo "só nesta sessão", sem subir pro Storage. */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 interface Props {
   initial: CompanyProfile;
   onSave: (data: Omit<CompanyProfile, "logoUrl">, logoFile: File | null) => Promise<void>;
   onCancel?: () => void;
   /** Quando true, não desenha o wrapper de tela cheia (usado dentro de um Modal). */
   bare?: boolean;
+  /** Falso no plano Teste: a logo não sobe pro Storage, só é usada localmente nos PDFs desta sessão. */
+  canSaveLogo?: boolean;
+  /** Chamado com a logo em base64 quando canSaveLogo é false -- fica só na tela, nunca vai pro banco. */
+  onLogoPreviewOnly?: (dataUrl: string) => void;
 }
 
-export default function CompanySetupForm({ initial, onSave, onCancel, bare = false }: Props) {
+export default function CompanySetupForm({ initial, onSave, onCancel, bare = false, canSaveLogo = true, onLogoPreviewOnly }: Props) {
   const [name, setName] = useState(initial.companyName || "");
   const [cnpj, setCnpj] = useState(initial.cnpj || "");
   const [endereco, setEndereco] = useState(initial.endereco || "");
@@ -39,7 +53,15 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
     setSaving(true);
     setMsg("");
     try {
-      await onSave({ companyName: name.trim(), cnpj: cnpj.trim(), endereco: endereco.trim(), telefone: telefone.trim(), email: email.trim() }, file);
+      const textData = { companyName: name.trim(), cnpj: cnpj.trim(), endereco: endereco.trim(), telefone: telefone.trim(), email: email.trim() };
+      if (file && !canSaveLogo) {
+        // Plano Teste: não sobe a logo pro Storage -- só guarda em base64 na tela, pra usar
+        // nos PDFs gerados agora. Some se recarregar a página ou trocar de conta.
+        onLogoPreviewOnly?.(await fileToDataUrl(file));
+        await onSave(textData, null);
+      } else {
+        await onSave(textData, file);
+      }
     } catch (err) {
       console.error("Falha ao salvar dados da empresa", err);
       setMsg(err instanceof LogoUploadError ? err.message : "Não foi possível salvar.");
@@ -56,7 +78,7 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
       </p>
       <div className="field">
         <label htmlFor="company-name">Nome da empresa (obrigatório)</label>
-        <input id="company-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Arrow Shot" required />
+        <input id="company-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Limpa Tudo Serviços" required />
       </div>
       <div className="field">
         <label htmlFor="company-cnpj">CNPJ (opcional)</label>
@@ -118,6 +140,11 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
             />
           </div>
         </div>
+        {!canSaveLogo && (
+          <p className="microlabel" style={{ marginTop: 6 }}>
+            No plano Teste a logo não fica salva — mas aparece nos PDFs que você gerar agora, nesta sessão. Assine um plano pra manter a logo salva pra sempre.
+          </p>
+        )}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={saving}>

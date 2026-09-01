@@ -271,16 +271,36 @@ input, select {
 
 .input, select.input {
   width: 100%;
+  min-width: 0;
   background: var(--n-900);
   border: 1px solid var(--n-800);
   border-radius: 6px;
   padding: 9px 12px;
   font-size: 14px;
+  line-height: 1.4;
   color: var(--n-100);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .input:focus { border-color: var(--amber-400); box-shadow: 0 0 0 3px var(--amber-300); }
+
+/* As setinhas nativas de type="number" comem espaço do campo e escondem o fim do que foi
+   digitado em valores maiores -- tira as setas (o pessoal não usa mesmo, digita direto) e
+   sobra mais espaço pro número aparecer inteiro. */
+.input[type="number"]::-webkit-outer-spin-button,
+.input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Mostra o valor completo num tooltip nativo ao passar o mouse -- ajuda quando o campo é
+   estreito e o texto digitado é maior do que cabe visível. */
+.input[title] {
+  text-overflow: ellipsis;
+}
 
 .grid-2 {
   display: grid;
@@ -411,7 +431,16 @@ input, select {
   padding: 1px 7px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.funil-col-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+.funil-col-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 
 .deal-card {
   background: var(--n-900);

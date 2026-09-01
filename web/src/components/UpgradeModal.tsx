@@ -55,8 +55,8 @@ export default function UpgradeModal({ accountId, email, companyName, cnpj, curr
   }
 
   return (
-    <Modal onClose={onClose}>
-      <div className="panel upgrade-modal" style={{ maxWidth: 640 }}>
+    <Modal onClose={onClose} maxWidth={640}>
+      <div className="panel upgrade-modal">
         <div className="upgrade-modal-header">
           <span className="upgrade-modal-icon">
             <RocketIcon />

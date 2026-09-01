@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/useAuth";
+import { DialogProvider } from "./context/DialogContext";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ClientPage from "./pages/ClientPage";
@@ -69,7 +70,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <DialogProvider>
+          <AppRoutes />
+        </DialogProvider>
       </AuthProvider>
     </BrowserRouter>
   );

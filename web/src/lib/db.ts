@@ -18,6 +18,8 @@ export interface AccountStatus {
   status?: string;
   plan?: string;
   billingCycle?: string;
+  /** Contador vitalício de orçamentos já criados -- só é usado (e só sobe) pro limite do plano Teste. */
+  proposalsCreatedCount?: number;
   subscriptionExpiresAt: Date | null;
   isExpired: boolean;
   isSuspended: boolean;

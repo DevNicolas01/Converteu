@@ -5,12 +5,34 @@ import { MESSAGE_TEMPLATES } from "../lib/templates";
 import { downloadClientPdf } from "../lib/pdf";
 import PresentationView from "./PresentationView";
 import type { CompanyProfile } from "../lib/db";
-import { InboxIcon, SendIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon } from "./Icons";
+import { useDialog } from "../context/useDialog";
+import {
+  InboxIcon,
+  SendIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  CreditCardIcon,
+  ZapIcon,
+  BanknoteIcon,
+  BarcodeIcon,
+  BankIcon,
+  LayersIcon,
+} from "./Icons";
 
 // Formas de pagamento recebidas à vista/na hora -- ao escolher uma delas, já preenchemos
 // o valor recebido como o valor total, porque na prática ninguém digita esse valor manualmente.
 // "Boleto" e "Parcelado" ficam de fora: o dinheiro pode levar dias pra cair ou vir em partes.
 const AUTO_FULL_PAYMENT_METHODS = new Set(["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Transferência"]);
+
+const PAYMENT_METHOD_ICONS: Record<string, ReactElement> = {
+  Pix: <ZapIcon />,
+  "Cartão de crédito": <CreditCardIcon />,
+  "Cartão de débito": <CreditCardIcon />,
+  Dinheiro: <BanknoteIcon />,
+  Boleto: <BarcodeIcon />,
+  Transferência: <BankIcon />,
+  Parcelado: <LayersIcon />,
+};
 
 const STAGE_META: Record<string, { icon: ReactElement; color: string }> = {
   aberto: { icon: <InboxIcon />, color: "var(--n-600)" },
@@ -36,9 +58,13 @@ function daysSince(iso: string | null | undefined) {
 }
 
 function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate, onSetPagamento }: Props & { deal: Deal }) {
+  const { alertDialog } = useDialog();
   const isDecided = deal.stage === "fechado" || deal.stage === "perdido";
   const [presenting, setPresenting] = useState(false);
-  const [expanded, setExpanded] = useState(!isDecided);
+  // Recolhido por padrão pra todo mundo -- com muitas propostas na coluna, deixar tudo aberto
+  // vira uma parede de campos. As pílulas de status ficam sempre visíveis (é a ação mais usada),
+  // o resto (follow-up, pagamento, mensagem) só aparece ao expandir.
+  const [expanded, setExpanded] = useState(false);
   const [templateId, setTemplateId] = useState(MESSAGE_TEMPLATES[0].id);
   const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) || MESSAGE_TEMPLATES[0];
   const companyName = company.companyName || "";
@@ -59,7 +85,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
   // abre a mensagem pronta; falta só anexar o arquivo baixado na hora de enviar.
   async function sendWhatsApp() {
     if (!deal.clientePhone) {
-      alert("Cadastre o WhatsApp do cliente no orçamento primeiro.");
+      await alertDialog("Cadastre o WhatsApp do cliente no orçamento primeiro.");
       return;
     }
     await downloadClientPdf(deal, company, deal.obraNumero || 1);
@@ -68,7 +94,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
 
   async function sendEmail() {
     if (!deal.clienteEmail) {
-      alert("Cadastre o e-mail do cliente no orçamento primeiro.");
+      await alertDialog("Cadastre o e-mail do cliente no orçamento primeiro.");
       return;
     }
     await downloadClientPdf(deal, company, deal.obraNumero || 1);
@@ -100,7 +126,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
         <span className="deal-value">{formatBRL(deal.valorFinal)}</span>
       </div>
       {deal.stage === "aguardando" && sentDays !== null && <p className="deal-meta">Enviada há {sentDays} dia(s)</p>}
-      {isDecided && placeLabel && <p className="deal-meta">{placeLabel}</p>}
+      {placeLabel && <p className="deal-meta">{placeLabel}</p>}
 
       {deal.stage === "fechado" && (
         <div className="payment-summary">
@@ -113,36 +139,39 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
           <div className="payment-progress-track">
             <div className={`payment-progress-fill ${paymentStatus}`} style={{ width: `${paymentPct}%` }} />
           </div>
-          {deal.formaPagamento && <p className="microlabel" style={{ margin: "4px 0 0" }}>{deal.formaPagamento}</p>}
+          {deal.formaPagamento && (
+            <p className="payment-summary-method">
+              <span className="payment-summary-method-icon">{PAYMENT_METHOD_ICONS[deal.formaPagamento]}</span>
+              {deal.formaPagamento}
+            </p>
+          )}
         </div>
       )}
 
-      {isDecided && (
-        <button type="button" className="link-btn" onClick={() => setExpanded((e) => !e)}>
-          {expanded ? "Recolher ▲" : "Ver detalhes ▾"}
-        </button>
-      )}
+      <div
+        className="stage-pills"
+        role="group"
+        aria-label={`Status da proposta de ${deal.clientName || "cliente sem nome"}: ${stageLabel}`}
+      >
+        {STAGES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
+            aria-pressed={deal.stage === s.id}
+            onClick={() => onChangeStage(deal, s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <button type="button" className="link-btn" onClick={() => setExpanded((e) => !e)}>
+        {expanded ? "Recolher ▲" : "Ver detalhes ▾"}
+      </button>
 
       {expanded && (
         <>
-          <div
-            className="stage-pills"
-            role="group"
-            aria-label={`Status da proposta de ${deal.clientName || "cliente sem nome"}: ${stageLabel}`}
-          >
-            {STAGES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
-                aria-pressed={deal.stage === s.id}
-                onClick={() => onChangeStage(deal, s.id)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
           {!isDecided && (
             <div className="field" style={{ marginBottom: 0, marginTop: 10 }}>
               <label htmlFor={followUpId} className="microlabel">
@@ -159,42 +188,54 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
           )}
 
           {deal.stage === "fechado" && (
-            <div className="cost-group" style={{ marginTop: 10 }}>
+            <div className="cost-group payment-panel" style={{ marginTop: 10 }}>
               <div className="cost-group-icon" style={{ background: "var(--cat-3)" }}>
                 <CreditCardIcon />
               </div>
-              <p className="cost-group-title">Pagamento</p>
-              <div className="cost-group-fields">
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label htmlFor={formaPagamentoId}>Forma de pagamento</label>
-                  <select
-                    id={formaPagamentoId}
-                    className="input"
-                    value={deal.formaPagamento}
-                    onChange={(e) => handleFormaPagamentoChange(e.target.value)}
+              <p className="cost-group-title" id={formaPagamentoId}>
+                Como foi pago?
+              </p>
+
+              <div className="payment-method-grid" role="radiogroup" aria-labelledby={formaPagamentoId}>
+                {FORMAS_PAGAMENTO.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    role="radio"
+                    aria-checked={deal.formaPagamento === f}
+                    className={`payment-method-btn${deal.formaPagamento === f ? " selected" : ""}`}
+                    onClick={() => handleFormaPagamentoChange(f)}
                   >
-                    <option value="">Selecione</option>
-                    {FORMAS_PAGAMENTO.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label htmlFor={valorPagoId}>Valor recebido (R$)</label>
+                    <span className="payment-method-icon">{PAYMENT_METHOD_ICONS[f]}</span>
+                    <span className="payment-method-label">{f}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="field payment-value-field">
+                <label htmlFor={valorPagoId}>Valor recebido</label>
+                <div className="currency-input">
+                  <span className="currency-prefix">R$</span>
                   <input
                     id={valorPagoId}
-                    className="input"
+                    className="input currency-input-field"
                     type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
                     value={deal.valorPago}
                     onChange={(e) => onSetPagamento(deal, { valorPago: e.target.value })}
                   />
                 </div>
               </div>
+
               {valorFinalNum > 0 && (
                 <div className="payment-quick-actions">
-                  <button type="button" className="quick-chip" onClick={() => onSetPagamento(deal, { valorPago: String(valorFinalNum) })}>
+                  <button
+                    type="button"
+                    className={`quick-chip${paymentStatus === "paid" ? " active" : ""}`}
+                    onClick={() => onSetPagamento(deal, { valorPago: String(valorFinalNum) })}
+                  >
                     Recebi tudo
                   </button>
                   <button
@@ -204,7 +245,11 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                   >
                     Recebi metade
                   </button>
-                  <button type="button" className="quick-chip" onClick={() => onSetPagamento(deal, { valorPago: "0" })}>
+                  <button
+                    type="button"
+                    className={`quick-chip${paymentStatus === "unpaid" ? " active" : ""}`}
+                    onClick={() => onSetPagamento(deal, { valorPago: "0" })}
+                  >
                     Nada ainda
                   </button>
                 </div>
@@ -287,14 +332,58 @@ export function AlertsPanel({ deals }: { deals: Deal[] }) {
   );
 }
 
+// Ordena cada coluna pelo que é mais relevante olhar primeiro -- em "aguardando", quem tem
+// follow-up mais próximo (ou já vencido) sobe pro topo; nas outras colunas, a mais recente
+// primeiro. Sem isso, com muitas propostas a ordem fica arbitrária (a do banco) e a pessoa
+// tem que ler a coluna inteira pra achar o que precisa de atenção agora.
+function sortDeals(items: Deal[], stageId: string): Deal[] {
+  const sorted = [...items];
+  if (stageId === "aguardando") {
+    sorted.sort((a, b) => (a.followUpDate || "9999-99-99").localeCompare(b.followUpDate || "9999-99-99"));
+  } else {
+    sorted.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  }
+  return sorted;
+}
+
 export default function ProposalsBoard(props: Props) {
   const { deals } = props;
+  const [search, setSearch] = useState("");
+
+  const filteredDeals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return deals;
+    return deals.filter((d) =>
+      [d.clientName, d.obraNome, d.endereco].some((v) => (v || "").toLowerCase().includes(q)),
+    );
+  }, [deals, search]);
+
   return (
     <div>
       <AlertsPanel deals={deals} />
+
+      <div className="funil-search">
+        <input
+          className="input"
+          type="search"
+          placeholder="Buscar por cliente, obra ou endereço..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Buscar propostas"
+        />
+        {search && (
+          <span className="microlabel">
+            {filteredDeals.length} de {deals.length} propostas
+          </span>
+        )}
+      </div>
+
       <div className="funil-grid">
         {STAGES.map((stage) => {
-          const items = deals.filter((d) => d.stage === stage.id);
+          const items = sortDeals(
+            filteredDeals.filter((d) => d.stage === stage.id),
+            stage.id,
+          );
           const totalValue = items.reduce((s, d) => s + num(d.valorFinal), 0);
           const meta = STAGE_META[stage.id];
           return (
@@ -315,7 +404,9 @@ export default function ProposalsBoard(props: Props) {
                 {items.map((deal) => (
                   <DealCard key={deal.id} deal={deal} {...props} />
                 ))}
-                {items.length === 0 && <p className="microlabel">Nenhuma proposta.</p>}
+                {items.length === 0 && (
+                  <p className="microlabel">{search ? "Nada encontrado nessa coluna." : "Nenhuma proposta."}</p>
+                )}
               </div>
             </section>
           );

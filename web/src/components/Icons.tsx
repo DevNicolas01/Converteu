@@ -211,6 +211,90 @@ export function SparklesIcon() {
   );
 }
 
+export function ZapIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <polygon points="13 2 3 14 11 14 11 22 21 10 13 10 13 2"></polygon>
+    </svg>
+  );
+}
+
+export function BanknoteIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+      <circle cx="12" cy="12" r="3"></circle>
+      <line x1="6" y1="12" x2="6" y2="12"></line>
+      <line x1="18" y1="12" x2="18" y2="12"></line>
+    </svg>
+  );
+}
+
+export function BarcodeIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <line x1="3" y1="4" x2="3" y2="20"></line>
+      <line x1="7" y1="4" x2="7" y2="20"></line>
+      <line x1="10" y1="4" x2="10" y2="20"></line>
+      <line x1="14" y1="4" x2="14" y2="20"></line>
+      <line x1="17" y1="4" x2="17" y2="20"></line>
+      <line x1="21" y1="4" x2="21" y2="20"></line>
+    </svg>
+  );
+}
+
+export function BankIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <polygon points="3 10 12 4 21 10"></polygon>
+      <line x1="4" y1="10" x2="4" y2="19"></line>
+      <line x1="9" y1="10" x2="9" y2="19"></line>
+      <line x1="15" y1="10" x2="15" y2="19"></line>
+      <line x1="20" y1="10" x2="20" y2="19"></line>
+      <line x1="2" y1="21" x2="22" y2="21"></line>
+    </svg>
+  );
+}
+
+export function LayersIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+      <polyline points="2 17 12 22 22 17"></polyline>
+      <polyline points="2 12 12 17 22 12"></polyline>
+    </svg>
+  );
+}
+
+export function LightbulbIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M9 18h6"></path>
+      <path d="M10 22h4"></path>
+      <path d="M12 2a7 7 0 0 0-4 12.7c.6.44 1 1.15 1 1.9V17h6v-.4c0-.75.4-1.46 1-1.9A7 7 0 0 0 12 2Z"></path>
+    </svg>
+  );
+}
+
+export function AlertTriangleIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12" y2="17"></line>
+    </svg>
+  );
+}
+
+export function CloseIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  );
+}
+
 export function LogoutIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">

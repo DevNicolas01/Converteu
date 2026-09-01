@@ -18,6 +18,7 @@ import {
   type AdminEntry,
 } from "../lib/adminDb";
 import { useAuth } from "../context/useAuth";
+import { useDialog } from "../context/useDialog";
 import ThemeToggle from "../components/ThemeToggle";
 import { LogoutIcon } from "../components/Icons";
 
@@ -113,6 +114,7 @@ type Tab = "geral" | "clientes" | "admins";
 
 export default function AdminOverviewPage() {
   const { logout } = useAuth();
+  const { confirmDialog, alertDialog } = useDialog();
   const [tab, setTab] = useState<Tab>("geral");
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [stats, setStats] = useState<Record<string, AdminAccountStats>>({});
@@ -166,13 +168,13 @@ export default function AdminOverviewPage() {
   }
 
   async function handleRemoveAdmin(uid: string) {
-    if (!confirm("Remover o acesso de admin dessa pessoa?")) return;
+    if (!(await confirmDialog("Remover o acesso de admin dessa pessoa?", { confirmLabel: "Remover", tone: "danger" }))) return;
     try {
       await adminRemoveAdmin(uid);
       await loadAdmins();
     } catch (e) {
       console.error("Falha ao remover admin", e);
-      alert("Não foi possível remover.");
+      await alertDialog("Não foi possível remover.");
     }
   }
 
@@ -207,30 +209,43 @@ export default function AdminOverviewPage() {
       await loadAccounts();
     } catch (e) {
       console.error("Falha ao renovar assinatura", e);
-      alert("Não foi possível renovar.");
+      await alertDialog("Não foi possível renovar.");
     }
   }
 
   async function handleToggleStatus(accountId: string, currentStatus: string | undefined) {
     const next = currentStatus === "active" ? "suspended" : "active";
-    if (next === "suspended" && !confirm("Suspender esta conta? O cliente perde acesso imediatamente.")) return;
+    if (
+      next === "suspended" &&
+      !(await confirmDialog("Suspender esta conta? O cliente perde acesso imediatamente.", {
+        confirmLabel: "Suspender",
+        tone: "danger",
+      }))
+    )
+      return;
     try {
       await adminSetAccountStatus(accountId, next);
       await loadAccounts();
     } catch (e) {
       console.error("Falha ao atualizar status", e);
-      alert("Não foi possível atualizar o status.");
+      await alertDialog("Não foi possível atualizar o status.");
     }
   }
 
   async function handleDeleteAccount(accountId: string, companyName: string | undefined) {
-    if (!confirm(`Excluir a conta "${companyName || accountId}"? Apaga todas as propostas e dados dela. Não tem como desfazer.`)) return;
+    if (
+      !(await confirmDialog(`Excluir a conta "${companyName || accountId}"? Apaga todas as propostas e dados dela. Não tem como desfazer.`, {
+        confirmLabel: "Excluir",
+        tone: "danger",
+      }))
+    )
+      return;
     try {
       await adminDeleteAccount(accountId);
       await loadAccounts();
     } catch (e) {
       console.error("Falha ao excluir conta", e);
-      alert("Não foi possível excluir a conta.");
+      await alertDialog("Não foi possível excluir a conta.");
     }
   }
 
@@ -317,13 +332,13 @@ export default function AdminOverviewPage() {
       <header className="topbar">
         <div className="brand-area">
           <div className="logo-container">
-            <img src="/arrowshot-logo.png" alt="Arrow Shot" className="company-logo" />
+            <img src="/logo.jpeg" alt="Deal Shot" className="company-logo" />
           </div>
           <div className="brand-info">
             <h1 className="brand">
               Painel <span>Admin</span>
             </h1>
-            <p className="subtitle">Contas e relatórios — Converteu</p>
+            <p className="subtitle">Contas e relatórios — Deal Shot</p>
           </div>
         </div>
         <div className="nav-area">

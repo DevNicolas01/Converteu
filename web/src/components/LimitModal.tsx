@@ -5,11 +5,13 @@ interface Props {
   used: number;
   limit: number;
   planLabel: string;
+  /** Ex.: "neste mês" (planos pagos) ou "no total do plano Teste" (limite vitalício). */
+  periodLabel: string;
   onUpgrade: () => void;
   onClose: () => void;
 }
 
-export default function LimitModal({ used, limit, planLabel, onUpgrade, onClose }: Props) {
+export default function LimitModal({ used, limit, planLabel, periodLabel, onUpgrade, onClose }: Props) {
   return (
     <Modal onClose={onClose}>
       <div className="panel limit-modal">
@@ -18,7 +20,7 @@ export default function LimitModal({ used, limit, planLabel, onUpgrade, onClose 
         </span>
         <h2 className="limit-modal-title">Você bombou este mês! 🎉</h2>
         <p className="limit-modal-text">
-          Você já criou <strong>{used} de {limit}</strong> orçamentos permitidos no plano <strong>{planLabel}</strong> neste mês.
+          Você já criou <strong>{used} de {limit}</strong> orçamentos permitidos {periodLabel} no plano <strong>{planLabel}</strong>.
           Melhore sua assinatura pra continuar criando orçamentos sem parar.
         </p>
         <div className="limit-modal-actions">

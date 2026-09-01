@@ -47,7 +47,7 @@ type AsaasPayment = { status: string; invoiceUrl: string };
 
 /**
  * Cria (ou reaproveita) o cliente e a assinatura no Asaas pra uma conta assinar/renovar/trocar
- * de plano do Converteu, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
+ * de plano do Deal Shot, e devolve o link de pagamento (invoiceUrl) pro front-end redirecionar.
  * O plano "teste" é gratuito e nunca deveria chegar aqui (ativado direto no cadastro).
  */
 export async function POST(req: Request): Promise<Response> {
@@ -124,7 +124,7 @@ export async function POST(req: Request): Promise<Response> {
           cycle: billingCycle === "anual" ? "YEARLY" : "MONTHLY",
           value,
           nextDueDate: new Date().toISOString().slice(0, 10),
-          description: `Assinatura Converteu - ${planLabel} (${billingCycle})`,
+          description: `Assinatura Deal Shot - ${planLabel} (${billingCycle})`,
           externalReference: accountId,
         }),
       });

@@ -22,6 +22,9 @@ function getDb(): Firestore {
   return getFirestore();
 }
 
+/** Erro interno só pra sinalizar "limite atingido" de dentro da transação e devolver 403. */
+class ProposalLimitReached extends Error {}
+
 async function verifyIdToken(idToken: string): Promise<string> {
   const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`, {
     method: "POST",
@@ -90,33 +93,61 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const limit = PLAN_LIMITS[account.plan as string] ?? null;
-  if (limit != null) {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const countSnap = await db
-      .collection(`accounts/${uid}/proposals`)
-      .where("criadoEm", ">=", Timestamp.fromDate(startOfMonth))
-      .count()
-      .get();
-    if (countSnap.data().count >= limit) {
-      return new Response(
-        `Você atingiu o limite de ${limit} orçamentos neste mês do plano atual. Faça upgrade pra continuar criando orçamentos.`,
-        { status: 403 },
-      );
-    }
-  }
+  const accountRef = db.doc(`accounts/${uid}`);
+  const proposalsCol = db.collection(`accounts/${uid}/proposals`);
 
   try {
-    const ref = await db.collection(`accounts/${uid}/proposals`).add({
-      ...payload,
-      criadoEm: Timestamp.now(),
-      atualizadoEm: Timestamp.now(),
-    });
-    return new Response(JSON.stringify({ id: ref.id }), {
+    let proposalId: string;
+
+    if (limit != null && account.plan === "teste") {
+      // O Teste é um limite vitalício (os 3 orçamentos do teste, e só) -- contar quantas
+      // propostas existem *agora* deixava a pessoa apagar uma proposta pra abrir espaço e
+      // criar outra na hora, girando o "trial" pra sempre. Por isso guardamos um contador que
+      // só sobe (nunca desce quando apaga) em accounts/{uid}.proposalsCreatedCount, e criamos
+      // a proposta + incrementamos o contador numa transação só, pra duas criações ao mesmo
+      // tempo não furarem o limite.
+      const proposalRef = proposalsCol.doc();
+      await db.runTransaction(async (tx) => {
+        const freshAccountSnap = await tx.get(accountRef);
+        let used = freshAccountSnap.data()?.proposalsCreatedCount as number | undefined;
+        if (used == null) {
+          // Conta criada antes desse contador existir -- usa quantas propostas ela já tem
+          // agora como ponto de partida, em vez de assumir zero (senão o limite "reseta").
+          const existingSnap = await tx.get(proposalsCol.count());
+          used = existingSnap.data().count;
+        }
+        if (used >= limit) {
+          throw new ProposalLimitReached();
+        }
+        tx.set(proposalRef, { ...payload, criadoEm: Timestamp.now(), atualizadoEm: Timestamp.now() });
+        tx.set(accountRef, { proposalsCreatedCount: used + 1 }, { merge: true });
+      });
+      proposalId = proposalRef.id;
+    } else {
+      if (limit != null) {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const countSnap = await proposalsCol.where("criadoEm", ">=", Timestamp.fromDate(startOfMonth)).count().get();
+        if (countSnap.data().count >= limit) {
+          throw new ProposalLimitReached();
+        }
+      }
+      const ref = await proposalsCol.add({ ...payload, criadoEm: Timestamp.now(), atualizadoEm: Timestamp.now() });
+      proposalId = ref.id;
+    }
+
+    return new Response(JSON.stringify({ id: proposalId }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
+    if (err instanceof ProposalLimitReached) {
+      const periodLabel = account.plan === "teste" ? "no total do plano Teste" : "neste mês";
+      return new Response(
+        `Você atingiu o limite de ${limit} orçamentos ${periodLabel}. Faça upgrade pra continuar criando orçamentos.`,
+        { status: 403 },
+      );
+    }
     console.error("Falha ao criar proposta", err);
     return new Response("Falha ao criar a proposta.", { status: 500 });
   }

@@ -13,7 +13,8 @@ import {
   type CompanyProfile,
 } from "../lib/db";
 import { useAuth } from "../context/useAuth";
-import { isThisMonth, planLimit, PLANS, type Deal, type PlanId, type BillingCycle } from "../lib/calc";
+import { useDialog } from "../context/useDialog";
+import { planLimit, planResetsMonthly, usedForPlanLimit, PLANS, type Deal, type PlanId, type BillingCycle } from "../lib/calc";
 import QuoteForm from "./QuoteForm";
 import ProposalsBoard from "./ProposalsBoard";
 import SalesOverview from "./SalesOverview";
@@ -29,6 +30,7 @@ type Tab = "calc" | "funil" | "painel";
 
 export default function AccountShell({ accountId, asAdmin = false }: { accountId: string; asAdmin?: boolean }) {
   const { logout } = useAuth();
+  const { confirmDialog, alertDialog } = useDialog();
   const [status, setStatus] = useState<AccountStatus | null>(null);
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -39,6 +41,8 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  // Logo escolhida no plano Teste: só em memória, nunca sobe pro Storage -- some ao recarregar.
+  const [ephemeralLogoUrl, setEphemeralLogoUrl] = useState<string | null>(null);
 
   async function loadAll() {
     const s = await getAccountStatus(accountId);
@@ -123,7 +127,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
                   window.location.href = url;
                 } catch {
                   setStartingCheckout(false);
-                  alert("Não foi possível abrir o pagamento. Tente de novo.");
+                  await alertDialog("Não foi possível abrir o pagamento. Tente de novo.");
                 }
               }}
             >
@@ -152,7 +156,15 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     setShowCompanyEditor(false);
   }
 
-  const companyIncomplete = !!company && (!company.companyName || !company.endereco || !company.telefone || !company.logoUrl);
+  // Mescla a logo "só nesta sessão" (plano Teste) com o perfil salvo, pra ela aparecer nos
+  // PDFs e no banner de "complete o perfil" mesmo sem estar gravada no banco.
+  const companyForDisplay: CompanyProfile | null = company
+    ? { ...company, logoUrl: company.logoUrl || ephemeralLogoUrl }
+    : company;
+
+  const companyIncomplete =
+    !!companyForDisplay &&
+    (!companyForDisplay.companyName || !companyForDisplay.endereco || !companyForDisplay.telefone || !companyForDisplay.logoUrl);
 
   async function handleSaveDeal(deal: Deal) {
     if (deal.id) {
@@ -161,7 +173,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
       // Checagem só pra dar feedback rápido sem round-trip -- quem garante o limite de
       // verdade é o /api/create-proposal, do lado do servidor.
       const limit = planLimit(status?.plan);
-      const usados = deals.filter((d) => isThisMonth(d.createdAt)).length;
+      const usados = usedForPlanLimit(deals, status?.plan, status?.proposalsCreatedCount);
       if (limit != null && usados >= limit) {
         setShowLimitModal(true);
         return;
@@ -171,11 +183,14 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
       const nextObraNumero = deals.reduce((max, d) => Math.max(max, d.obraNumero || 0), 0) + 1;
       try {
         await createProposal(accountId, { ...deal, obraNumero: nextObraNumero });
+        // Atualiza o contador vitalício do Teste (accounts/{id}.proposalsCreatedCount), que o
+        // servidor acabou de incrementar -- senão o badge de uso ficaria com o número antigo.
+        setStatus(await getAccountStatus(accountId));
       } catch (err) {
         if (err instanceof ProposalLimitError) {
           setShowLimitModal(true);
         } else {
-          alert("Não foi possível criar o orçamento. Tente de novo.");
+          await alertDialog("Não foi possível criar o orçamento. Tente de novo.");
         }
         return;
       }
@@ -207,15 +222,19 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta proposta?")) return;
+    if (!(await confirmDialog("Excluir esta proposta?", { confirmLabel: "Excluir", tone: "danger" }))) return;
     await deleteProposal(accountId, id);
     setDeals((ds) => ds.filter((d) => d.id !== id));
   }
 
   const planId = status.plan as PlanId | undefined;
+  // Persistir a logo no Storage é um recurso pago -- no Teste, só dá pra usá-la nos PDFs
+  // desta sessão (ephemeralLogoUrl), sem gravar no banco.
+  const canSaveLogo = planId !== "teste";
   const monthlyLimit = planLimit(planId);
-  const usedThisMonth = deals.filter((d) => isThisMonth(d.createdAt)).length;
+  const usedForLimit = usedForPlanLimit(deals, planId, status.proposalsCreatedCount);
   const currentPlanLabel = PLANS.find((p) => p.id === planId)?.label || "atual";
+  const limitPeriodLabel = planResetsMonthly(planId) ? "neste mês" : "no total do plano Teste";
 
   return (
     <div id="app">
@@ -233,11 +252,11 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
       <header className="topbar">
         <div className="brand-area">
           <div className="logo-container">
-            <img src="/arrowshot-logo.png" alt="Arrow Shot" className="company-logo" />
+            <img src="/logo.jpeg" alt="Deal Shot" className="company-logo" />
           </div>
           <div className="brand-info">
             <h1 className="brand">
-              Conv<span>erteu</span>
+              Deal <span>Shot</span>
             </h1>
             <p className="subtitle">Orçamentos para você!</p>
           </div>
@@ -254,7 +273,9 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
               Resultados
             </button>
           </nav>
-          {!asAdmin && <UsageBadge used={usedThisMonth} limit={monthlyLimit} onClick={() => setShowUpgradeModal(true)} />}
+          {!asAdmin && (
+            <UsageBadge used={usedForLimit} limit={monthlyLimit} periodLabel={limitPeriodLabel} onClick={() => setShowUpgradeModal(true)} />
+          )}
           <ThemeToggle />
           {!asAdmin && (
             <button className="theme-toggle" title="Assinatura" aria-label="Melhorar assinatura" onClick={() => setShowUpgradeModal(true)}>
@@ -272,11 +293,13 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         </div>
       </header>
 
-      {showCompanyEditor && company && (
+      {showCompanyEditor && companyForDisplay && (
         <Modal onClose={() => setShowCompanyEditor(false)}>
           <CompanySetupForm
             bare
-            initial={company}
+            initial={companyForDisplay}
+            canSaveLogo={canSaveLogo}
+            onLogoPreviewOnly={setEphemeralLogoUrl}
             onCancel={() => setShowCompanyEditor(false)}
             onSave={handleSaveCompany}
           />
@@ -285,9 +308,10 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
 
       {showLimitModal && (
         <LimitModal
-          used={usedThisMonth}
-          limit={monthlyLimit || usedThisMonth}
+          used={usedForLimit}
+          limit={monthlyLimit || usedForLimit}
           planLabel={currentPlanLabel}
+          periodLabel={limitPeriodLabel}
           onUpgrade={() => {
             setShowLimitModal(false);
             setShowUpgradeModal(true);
@@ -325,7 +349,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
           <QuoteForm
             key={editingDeal?.id || "new"}
             initialDeal={editingDeal}
-            company={company || {}}
+            company={companyForDisplay || {}}
             obraNumero={deals.length + 1}
             onSave={handleSaveDeal}
             onCancelEdit={() => setEditingDeal(null)}
@@ -334,7 +358,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
         {tab === "funil" && (
           <ProposalsBoard
             deals={deals}
-            company={company || {}}
+            company={companyForDisplay || {}}
             onEdit={(deal) => {
               setEditingDeal(deal);
               setTab("calc");

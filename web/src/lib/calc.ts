@@ -42,15 +42,21 @@ export interface Deal {
 
   qtd: Record<string, string>;
   diaria: Record<string, string>;
+  /** % de encargos (INSS, FGTS, férias, 13º) sobre a mão de obra -- 0 pra quem só trabalha com diarista informal. */
+  encargosPct: string;
+  /** Quanto o próprio dono precisa receber por esse serviço -- separado do lucro da empresa. */
+  proLabore: string;
 
   visitaTecnica: string;
   rateioAdm: string;
   valorNota: string;
   impostoPct: string;
+  /** % extra sobre o custo total pra cobrir desperdício de produto, pano estragado, imprevisto na obra etc. */
+  gorduraPct: string;
   valorPagamento: string;
   valorFinal?: number;
 
-  /** Produtos/materiais de limpeza usados no serviço (nome + custo), somados ao cálculo automático por faixa. */
+  /** Produtos/materiais de limpeza usados no serviço, somados ao cálculo automático por faixa. */
   produtos: ProdutoItem[];
   /** Override manual do % de materiais sobre o custo-base — vazio usa a faixa automática (4/8/12%). */
   materialPctManual: string;
@@ -58,9 +64,19 @@ export interface Deal {
 
 export interface ProdutoItem {
   nome: string;
+  /** Ácido / alcalino / neutro / outro -- ajuda a lembrar de não misturar produtos incompatíveis. */
+  categoria: string;
+  /** Opcional, só pra identificar qual produto específico foi usado (ex: reposição, comparação de preço). */
+  marca: string;
   quantidade: string;
   valorUnitario: string;
 }
+
+/** Categorias de produto de limpeza -- útil pra não misturar ácido com alcalino sem querer. */
+export const PRODUTO_CATEGORIAS = ["Ácido", "Alcalino", "Neutro", "Outro"];
+
+/** Abaixo disso o orçamento é considerado arriscado -- o app avisa e pede confirmação antes de salvar. */
+export const MARGEM_MINIMA_SAUDAVEL = 0.3;
 
 export const ROLES = [
   { key: "auxiliar", label: "Auxiliar de limpeza" },
@@ -148,15 +164,22 @@ export function emptyDeal(): Deal {
 
     qtd: { auxiliar: "1", lider: "0", supervisor: "0", administrativo: "0" },
     diaria: { auxiliar: "120", lider: "180", supervisor: "150", administrativo: "150" },
+    encargosPct: "0",
+    proLabore: "",
 
     visitaTecnica: "",
     rateioAdm: "",
     valorNota: "",
     impostoPct: "",
+    gorduraPct: "8",
     valorPagamento: "",
     produtos: [],
     materialPctManual: "",
   };
+}
+
+export function emptyProduto(): ProdutoItem {
+  return { nome: "", categoria: "Neutro", marca: "", quantidade: "1", valorUnitario: "" };
 }
 
 export const PLANS = [
@@ -176,7 +199,7 @@ export const PLAN_PRICES: Record<Exclude<PlanId, "teste">, Record<BillingCycle, 
   sem_limite: { mensal: 59.9, anual: 599 },
 };
 
-/** Limite de orçamentos/mês do plano (null = ilimitado; plano desconhecido/antigo = sem limite). */
+/** Limite de orçamentos do plano (null = ilimitado; plano desconhecido/antigo = sem limite). */
 export function planLimit(planId: string | undefined): number | null {
   return PLANS.find((p) => p.id === planId)?.limit ?? null;
 }
@@ -186,6 +209,30 @@ export function isThisMonth(iso: string | null | undefined): boolean {
   const d = new Date(iso);
   const now = new Date();
   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+/**
+ * O plano Teste é um limite vitalício (os 3 orçamentos do teste, e só) -- diferente dos planos
+ * pagos, cujo limite é por mês porque acompanha o ciclo de cobrança da assinatura. Se o Teste
+ * também resetasse por mês, a conta ganharia 3 orçamentos grátis todo mês pra sempre, sem nunca
+ * precisar assinar.
+ */
+export function planResetsMonthly(planId: string | undefined): boolean {
+  return planId !== "teste";
+}
+
+/**
+ * Quantos orçamentos já contam pro limite do plano -- só os do mês nos planos pagos. No Teste é
+ * o contador vitalício da conta (lifetimeUsed, vindo de accounts/{id}.proposalsCreatedCount) --
+ * NÃO dá pra contar quantas propostas existem agora, porque apagar uma abriria espaço pra criar
+ * outra e o "trial" nunca acabaria. Se lifetimeUsed ainda não veio (conta carregando), cai no
+ * total de propostas como aproximação só pra não travar a tela.
+ */
+export function usedForPlanLimit(deals: { createdAt: string }[], planId: string | undefined, lifetimeUsed?: number): number {
+  if (!planResetsMonthly(planId)) {
+    return lifetimeUsed ?? deals.length;
+  }
+  return deals.filter((d) => isThisMonth(d.createdAt)).length;
 }
 
 export function num(v: unknown): number {
@@ -284,7 +331,13 @@ export function calcDeal(d: Deal) {
     maoDeObraTotal += num(d.qtd[r.key]) * num(d.diaria[r.key]) * dias;
   });
 
-  const baseParaMaterial = maoDeObraTotal + apoioTotal + num(d.rateioAdm) + num(d.visitaTecnica);
+  // Encargos (INSS/FGTS/férias/13º) incidem sobre a mão de obra; pró-labore é o que o dono
+  // precisa receber, separado do lucro -- as duas coisas que quem não tem contador mais esquece
+  // de colocar na conta, e por isso acaba trabalhando por menos do que devia.
+  const encargosTotal = maoDeObraTotal * (num(d.encargosPct) / 100);
+  const proLaboreTotal = num(d.proLabore);
+
+  const baseParaMaterial = maoDeObraTotal + encargosTotal + proLaboreTotal + apoioTotal + num(d.rateioAdm) + num(d.visitaTecnica);
   const materialPct = d.materialPctManual !== "" && d.materialPctManual != null
     ? num(d.materialPctManual) / 100
     : materialPercent(baseParaMaterial);
@@ -294,7 +347,14 @@ export function calcDeal(d: Deal) {
   const impostoPct = num(d.impostoPct);
   const impostoTotal = num(d.valorNota) * (impostoPct / 100);
 
-  const custosOperacionais = baseParaMaterial + materiaisTotal + impostoTotal;
+  const custosAntesDaGordura = baseParaMaterial + materiaisTotal + impostoTotal;
+
+  // "Gordura de segurança": cobre desperdício de produto, pano/ferramenta estragada e imprevisto
+  // na obra -- entra automaticamente no custo, então o preço sugerido já nasce protegido em vez
+  // de depender de o usuário lembrar de "arredondar pra cima".
+  const gorduraPct = num(d.gorduraPct) / 100;
+  const gorduraValor = custosAntesDaGordura * gorduraPct;
+  const custosOperacionais = custosAntesDaGordura + gorduraValor;
 
   const margem = Math.min(num(d.margem) / 100, 0.95);
   const precoVendaSugerido = margem < 1 ? custosOperacionais / (1 - margem) : custosOperacionais;
@@ -307,6 +367,7 @@ export function calcDeal(d: Deal) {
   const markupRealFinal = custosOperacionais > 0 ? (valorFinal - custosOperacionais) / custosOperacionais : 0;
   const metragem = num(d.metragem);
   const custoPorM2 = metragem > 0 ? custosOperacionais / metragem : 0;
+  const margemAbaixoDoSaudavel = valorFinal > 0 && margemReal < MARGEM_MINIMA_SAUDAVEL;
 
   return {
     vtTotal,
@@ -314,10 +375,14 @@ export function calcDeal(d: Deal) {
     combustivelTotal,
     apoioTotal,
     maoDeObraTotal,
+    encargosTotal,
+    proLaboreTotal,
     materiaisTotal,
     materialPct,
     custoProdutos,
     impostoTotal,
+    gorduraValor,
+    custosAntesDaGordura,
     custosOperacionais,
     precoVendaSugerido,
     lucroRS,
@@ -325,5 +390,6 @@ export function calcDeal(d: Deal) {
     margemReal,
     markupRealFinal,
     custoPorM2,
+    margemAbaixoDoSaudavel,
   };
 }

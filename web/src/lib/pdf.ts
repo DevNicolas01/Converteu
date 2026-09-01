@@ -252,8 +252,10 @@ async function buildProposalDoc(
     sectionTitle("Resumo de custos (uso interno)");
     const rows: TableRow[] = [
       { label: "Equipe", value: formatBRL(calc.maoDeObraTotal) },
-      { label: "Transporte e alimentação", value: formatBRL(calc.apoioTotal) },
     ];
+    if (calc.encargosTotal > 0) rows.push({ label: "Encargos", value: formatBRL(calc.encargosTotal) });
+    if (calc.proLaboreTotal > 0) rows.push({ label: "Pró-labore do responsável", value: formatBRL(calc.proLaboreTotal) });
+    rows.push({ label: "Transporte e alimentação", value: formatBRL(calc.apoioTotal) });
     (deal.produtos || [])
       .filter((p) => p.nome || p.valorUnitario)
       .forEach((p) => {
@@ -263,6 +265,7 @@ async function buildProposalDoc(
       });
     rows.push({ label: "Materiais (total)", value: formatBRL(calc.materiaisTotal) });
     rows.push({ label: "Impostos", value: formatBRL(calc.impostoTotal) });
+    if (calc.gorduraValor > 0) rows.push({ label: "Gordura de segurança", value: formatBRL(calc.gorduraValor) });
     rows.push({ label: "Custo total do serviço", value: formatBRL(calc.custosOperacionais), emphasis: true });
     rows.push({ label: "Lucro estimado", value: formatBRL(calc.lucroRS), emphasis: true });
     rows.push({ label: "Margem real", value: `${(calc.margemReal * 100).toFixed(1)}%`, emphasis: true });

@@ -1,6 +1,7 @@
 import { cloneElement, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   emptyDeal,
+  emptyProduto,
   calcDeal,
   computeDataTermino,
   estimateProductCostByArea,
@@ -12,13 +13,29 @@ import {
   LEAD_SOURCES,
   CLIENT_TYPES,
   PAID_TRAFFIC_CHANNELS,
+  PRODUTO_CATEGORIAS,
+  MARGEM_MINIMA_SAUDAVEL,
   type Deal,
   type ProdutoItem,
 } from "../lib/calc";
 import { downloadClientPdf, downloadInternalPdf } from "../lib/pdf";
 import PresentationView from "./PresentationView";
 import type { CompanyProfile } from "../lib/db";
-import { BuildingIcon, UsersIcon, CreditCardIcon, BoxIcon, PercentIcon, TruckIcon, CoffeeIcon, DropletIcon, ParkingIcon, TrashIcon } from "./Icons";
+import { useDialog } from "../context/useDialog";
+import {
+  BuildingIcon,
+  UsersIcon,
+  CreditCardIcon,
+  BoxIcon,
+  PercentIcon,
+  TruckIcon,
+  CoffeeIcon,
+  DropletIcon,
+  ParkingIcon,
+  TrashIcon,
+  LightbulbIcon,
+  AlertTriangleIcon,
+} from "./Icons";
 
 interface Props {
   initialDeal?: Deal | null;
@@ -63,12 +80,24 @@ function StepHeader({ index }: { index: number }) {
 }
 
 export default function QuoteForm({ initialDeal, company, obraNumero, onSave, onCancelEdit }: Props) {
+  const { confirmDialog } = useDialog();
   const [deal, setDeal] = useState<Deal>(() => initialDeal || emptyDeal());
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [saveError, setSaveError] = useState(false);
+
+  // Calculadora auxiliar de rateio administrativo -- não faz parte do orçamento salvo, só ajuda
+  // a chegar num valor pra colocar no campo "Custos fixos do escritório" abaixo.
+  const [showRateioHelper, setShowRateioHelper] = useState(false);
+  const [rateioAluguel, setRateioAluguel] = useState("");
+  const [rateioContas, setRateioContas] = useState("");
+  const [rateioContador, setRateioContador] = useState("");
+  const [rateioOutros, setRateioOutros] = useState("");
+  const [rateioServicosMes, setRateioServicosMes] = useState("");
+  const rateioSugerido =
+    (num(rateioAluguel) + num(rateioContas) + num(rateioContador) + num(rateioOutros)) / Math.max(1, num(rateioServicosMes));
 
   const calc = useMemo(() => calcDeal(deal), [deal]);
   const isEditing = !!deal.id;
@@ -91,7 +120,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
   }
 
   function addProduto() {
-    setDeal((d) => ({ ...d, produtos: [...(d.produtos || []), { nome: "", quantidade: "1", valorUnitario: "" }] }));
+    setDeal((d) => ({ ...d, produtos: [...(d.produtos || []), emptyProduto()] }));
   }
 
   function setProduto(index: number, patch: Partial<ProdutoItem>) {
@@ -111,6 +140,19 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
       setSaveMsg("Preencha o nome do cliente.");
       setStep(0);
       return;
+    }
+    // Trava de margem: não impede de vez (às vezes a pessoa tem um motivo pra cobrar menos),
+    // mas exige uma confirmação consciente em vez de deixar salvar de forma "acidental" um preço
+    // que dá prejuízo.
+    if (calc.margemAbaixoDoSaudavel) {
+      const ok = await confirmDialog(
+        `Esse preço deixa a margem em ${(calc.margemReal * 100).toFixed(1)}% — abaixo dos ${(MARGEM_MINIMA_SAUDAVEL * 100).toFixed(0)}% recomendados pra não trabalhar no prejuízo. Quer salvar assim mesmo?`,
+        { title: "Margem baixa", confirmLabel: "Salvar assim mesmo", cancelLabel: "Voltar e ajustar", tone: "danger" },
+      );
+      if (!ok) {
+        setStep(lastStep);
+        return;
+      }
     }
     setSaving(true);
     setSaveMsg("");
@@ -169,7 +211,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Cliente</p>
                 <div className="cost-group-fields">
-                  {field("Cliente", <input className="input" value={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
+                  {field("Cliente", <input className="input" value={deal.clientName} title={deal.clientName} onChange={(e) => set("clientName", e.target.value)} required />, "clientName")}
                   {field(
                     "Tipo de imóvel",
                     <select className="input" value={deal.clientType} onChange={(e) => set("clientType", e.target.value)}>
@@ -199,9 +241,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               <div className="cost-group">
                 <p className="cost-group-title">Obra e local</p>
                 <div className="cost-group-fields">
-                  {field("Nome da obra", <input className="input" value={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
-                  {field("Endereço", <input className="input" value={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
-                  {field("Responsável", <input className="input" value={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
+                  {field("Nome da obra", <input className="input" value={deal.obraNome} title={deal.obraNome} onChange={(e) => set("obraNome", e.target.value)} />, "obraNome")}
+                  {field("Endereço", <input className="input" value={deal.endereco} title={deal.endereco} onChange={(e) => set("endereco", e.target.value)} />, "endereco")}
+                  {field("Responsável", <input className="input" value={deal.responsavel} title={deal.responsavel} onChange={(e) => set("responsavel", e.target.value)} />, "responsavel")}
                   {field("Metragem (m²)", <input className="input" type="number" value={deal.metragem} onChange={(e) => set("metragem", e.target.value)} />, "metragem")}
                 </div>
               </div>
@@ -308,9 +350,30 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
               })}
             </div>
 
+            <div className="cost-group" style={{ marginTop: 14 }}>
+              <p className="cost-group-title">Encargos e o seu pró-labore</p>
+              <div className="cost-group-fields">
+                {field(
+                  "Encargos sobre a equipe (%)",
+                  <input className="input" type="number" value={deal.encargosPct ?? "0"} onChange={(e) => set("encargosPct", e.target.value)} />,
+                  "encargosPct",
+                )}
+                {field(
+                  "Seu pró-labore neste serviço (R$)",
+                  <input className="input" type="number" value={deal.proLabore ?? ""} onChange={(e) => set("proLabore", e.target.value)} />,
+                  "proLabore",
+                )}
+              </div>
+              <p className="microlabel" style={{ marginTop: 8 }}>
+                <strong>Encargos</strong> são INSS, FGTS, férias e 13º de quem é registrado — deixe 0 se você só trabalha com diarista informal.{" "}
+                <strong>Pró-labore</strong> é o quanto <em>você</em> precisa receber por esse serviço, separado do lucro da empresa — muita gente
+                esquece de se pagar e acaba trabalhando de graça.
+              </p>
+            </div>
+
             <div className="cost-total-banner">
-              <span>Total de equipe</span>
-              <strong>{formatBRL(calc.maoDeObraTotal)}</strong>
+              <span>Total de equipe (com encargos e pró-labore)</span>
+              <strong>{formatBRL(calc.maoDeObraTotal + calc.encargosTotal + calc.proLaboreTotal)}</strong>
             </div>
           </>
         )}
@@ -393,56 +456,90 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
             )}
 
             {(deal.produtos || []).length > 0 && (
-              <div className="produtos-table">
-                <div className="produtos-row produtos-header">
-                  <span>Produto</span>
-                  <span>Qtd.</span>
-                  <span>Custo unit. (R$)</span>
-                  <span>Subtotal</span>
-                  <span></span>
-                </div>
+              <div className="produtos-list">
                 {(deal.produtos || []).map((p, i) => (
-                  <div className="produtos-row" key={i}>
-                    <input
-                      className="input"
-                      placeholder="Ex: detergente"
-                      aria-label={`Nome do produto ${i + 1}`}
-                      value={p.nome}
-                      onChange={(e) => setProduto(i, { nome: e.target.value })}
-                    />
-                    <input
-                      className="input"
-                      type="number"
-                      min={0}
-                      aria-label={`Quantidade do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                      value={p.quantidade}
-                      onChange={(e) => setProduto(i, { quantidade: e.target.value })}
-                    />
-                    <input
-                      className="input"
-                      type="number"
-                      aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                      value={p.valorUnitario}
-                      onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
-                    />
-                    <span className="produtos-subtotal">{formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}</span>
-                    <button
-                      type="button"
-                      className="icon-action-btn danger produtos-remove-btn"
-                      onClick={() => removeProduto(i)}
-                      aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
-                    >
-                      <TrashIcon />
-                    </button>
+                  <div className="produto-card" key={i}>
+                    <div className="produto-card-head">
+                      <input
+                        className="input produto-card-name"
+                        placeholder="Ex: Detergente neutro"
+                        aria-label={`Nome do produto ${i + 1}`}
+                        title={p.nome}
+                        value={p.nome}
+                        onChange={(e) => setProduto(i, { nome: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="icon-action-btn danger produtos-remove-btn"
+                        onClick={() => removeProduto(i)}
+                        aria-label={`Remover produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                    <div className="cost-group-fields">
+                      {field(
+                        "Categoria",
+                        <select
+                          className="input"
+                          aria-label={`Categoria do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                          value={p.categoria || "Neutro"}
+                          onChange={(e) => setProduto(i, { categoria: e.target.value })}
+                        >
+                          {PRODUTO_CATEGORIAS.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>,
+                        `produtoCategoria${i}`,
+                      )}
+                      {field(
+                        "Marca (opcional)",
+                        <input
+                          className="input"
+                          placeholder="Ex: Veja, Ypê"
+                          aria-label={`Marca do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                          value={p.marca || ""}
+                          onChange={(e) => setProduto(i, { marca: e.target.value })}
+                        />,
+                        `produtoMarca${i}`,
+                      )}
+                      {field(
+                        "Quantidade usada",
+                        <input
+                          className="input"
+                          type="number"
+                          min={0}
+                          aria-label={`Quantidade do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                          value={p.quantidade}
+                          onChange={(e) => setProduto(i, { quantidade: e.target.value })}
+                        />,
+                        `produtoQtd${i}`,
+                      )}
+                      {field(
+                        "Custo unitário (R$)",
+                        <input
+                          className="input"
+                          type="number"
+                          aria-label={`Custo unitário do produto ${i + 1}${p.nome ? `: ${p.nome}` : ""}`}
+                          value={p.valorUnitario}
+                          onChange={(e) => setProduto(i, { valorUnitario: e.target.value })}
+                        />,
+                        `produtoValor${i}`,
+                      )}
+                    </div>
+                    <p className="produtos-subtotal produto-card-subtotal">
+                      Subtotal: {formatBRL(num(p.quantidade || "1") * num(p.valorUnitario))}
+                    </p>
                   </div>
                 ))}
-                <div className="produtos-row produtos-total-row">
-                  <span>Total dos produtos</span>
-                  <span></span>
-                  <span></span>
-                  <span className="produtos-subtotal">{formatBRL(calc.custoProdutos)}</span>
-                  <span></span>
-                </div>
+              </div>
+            )}
+            {(deal.produtos || []).length > 0 && (
+              <div className="cost-total-banner" style={{ marginBottom: 16 }}>
+                <span>Total dos produtos</span>
+                <strong>{formatBRL(calc.custoProdutos)}</strong>
               </div>
             )}
             <button type="button" className="icon-action-btn" onClick={addProduto} style={{ marginBottom: 16 }}>
@@ -479,13 +576,48 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
             <StepHeader index={4} />
             <div className="cost-group-grid">
               <div className="cost-group">
-                <p className="cost-group-title">Custos administrativos</p>
+                <p className="cost-group-title">Custos fixos do escritório</p>
                 <div className="cost-group-fields">
                   {field("Visita técnica (R$)", <input className="input" type="number" value={deal.visitaTecnica} onChange={(e) => set("visitaTecnica", e.target.value)} />, "visitaTecnica")}
-                  {field("Rateio ADM (R$)", <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />, "rateioAdm")}
+                  {field(
+                    "Custos fixos do escritório (R$)",
+                    <input className="input" type="number" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />,
+                    "rateioAdm",
+                  )}
                   {field("Nota fiscal (R$)", <input className="input" type="number" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
                   {field("Imposto (%)", <input className="input" type="number" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
                 </div>
+
+                <button type="button" className="link-btn" style={{ marginTop: 8 }} onClick={() => setShowRateioHelper((s) => !s)}>
+                  {showRateioHelper ? "Fechar calculadora ▲" : "Não sabe quanto colocar em custos fixos? Calcular ▾"}
+                </button>
+
+                {showRateioHelper && (
+                  <div className="rateio-helper">
+                    <p className="microlabel" style={{ marginTop: 0 }}>
+                      Soma os custos fixos do mês (aluguel, água/luz, contador...) e divide por quantos serviços você faz no mês — assim cada
+                      orçamento carrega sua fatia justa do escritório.
+                    </p>
+                    <div className="cost-group-fields">
+                      {field("Aluguel (R$/mês)", <input className="input" type="number" value={rateioAluguel} onChange={(e) => setRateioAluguel(e.target.value)} />, "rateioAluguel")}
+                      {field("Água/luz/internet (R$/mês)", <input className="input" type="number" value={rateioContas} onChange={(e) => setRateioContas(e.target.value)} />, "rateioContas")}
+                      {field("Contador (R$/mês)", <input className="input" type="number" value={rateioContador} onChange={(e) => setRateioContador(e.target.value)} />, "rateioContador")}
+                      {field("Outros custos fixos (R$/mês)", <input className="input" type="number" value={rateioOutros} onChange={(e) => setRateioOutros(e.target.value)} />, "rateioOutros")}
+                      {field(
+                        "Quantos serviços você faz por mês",
+                        <input className="input" type="number" min={1} value={rateioServicosMes} onChange={(e) => setRateioServicosMes(e.target.value)} />,
+                        "rateioServicosMes",
+                      )}
+                    </div>
+                    <div className="rateio-helper-result">
+                      <span>Custo fixo sugerido por serviço</span>
+                      <strong>{formatBRL(rateioSugerido)}</strong>
+                      <button type="button" className="icon-action-btn primary" onClick={() => { set("rateioAdm", rateioSugerido.toFixed(2)); setShowRateioHelper(false); }}>
+                        Usar esse valor
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="cost-group">
@@ -493,13 +625,44 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <div className="cost-group-fields">
                   {field("Margem desejada (%)", <input className="input" type="number" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
                   {field(
-                    "Forçar valor final (R$)",
+                    "Gordura de segurança (%)",
+                    <input className="input" type="number" value={deal.gorduraPct ?? "8"} onChange={(e) => set("gorduraPct", e.target.value)} />,
+                    "gorduraPct",
+                  )}
+                  {field(
+                    "Definir um valor final diferente (R$)",
                     <input className="input" type="number" value={deal.valorPagamento} onChange={(e) => set("valorPagamento", e.target.value)} />,
                     "valorPagamento",
                   )}
                 </div>
+                <p className="microlabel" style={{ marginTop: 8 }}>
+                  A <strong>gordura de segurança</strong> já entra automaticamente no custo pra cobrir desperdício de produto, pano/ferramenta
+                  estragada e imprevisto na obra — assim o preço sugerido já nasce protegido. Deixe o valor final em branco pra usar o preço
+                  sugerido calculado abaixo.
+                </p>
               </div>
             </div>
+
+            <div className="tip-box">
+              <LightbulbIcon />
+              <p>
+                Não copie o preço do concorrente nem "chute" um valor — baseie-se no que <strong>você</strong> gasta de verdade. Cobrar barato
+                demais pra fechar a venda é o jeito mais rápido de quebrar sua empresa.
+              </p>
+            </div>
+
+            {calc.margemAbaixoDoSaudavel && (
+              <div className="margin-warning">
+                <AlertTriangleIcon />
+                <div>
+                  <p className="margin-warning-title">Margem de {(calc.margemReal * 100).toFixed(1)}% — abaixo do recomendado</p>
+                  <p>
+                    Com esses custos, esse preço deixa menos de {(MARGEM_MINIMA_SAUDAVEL * 100).toFixed(0)}% de margem. Ajuste a margem desejada
+                    ou o valor final antes de salvar, ou o app vai pedir uma confirmação extra.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="cost-total-banner">
               <span>Preço sugerido</span>
@@ -531,22 +694,28 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
         </div>
 
         {step === lastStep && (
-          <div className="actions-row">
-            <button className="pdf-btn" onClick={() => setPresenting(true)} type="button" title="Mostra a proposta em slides, pra apresentar no celular/tablet">
-              Apresentar
-            </button>
-            <button className="pdf-btn" onClick={handleDownloadClientPdf} type="button" title="Proposta limpa, sem detalhamento de custos — pra mandar ao cliente">
-              PDF para o cliente
-            </button>
-            <button className="pdf-btn" onClick={handleDownloadInternalPdf} type="button" title="Com detalhamento de custos — só pra uso interno da empresa">
-              PDF interno (com custos)
-            </button>
-            {isEditing && onCancelEdit && (
-              <button className="link-btn" type="button" onClick={onCancelEdit}>
-                cancelar edição
+          <>
+            <div className="actions-row">
+              <button className="pdf-btn" onClick={() => setPresenting(true)} type="button" title="Mostra a proposta em slides, pra apresentar no celular/tablet">
+                Apresentar
               </button>
-            )}
-          </div>
+              <button className="pdf-btn" onClick={handleDownloadClientPdf} type="button" title="Proposta limpa, sem detalhamento de custos — pra mandar ao cliente">
+                PDF para o cliente
+              </button>
+              <button className="pdf-btn" onClick={handleDownloadInternalPdf} type="button" title="Com detalhamento de custos — só pra uso interno da empresa">
+                PDF interno (com custos)
+              </button>
+              {isEditing && onCancelEdit && (
+                <button className="link-btn" type="button" onClick={onCancelEdit}>
+                  cancelar edição
+                </button>
+              )}
+            </div>
+            <p className="microlabel" style={{ marginTop: 8 }}>
+              💡 Prefira <strong>Apresentar</strong> a só mandar o preço pronto no WhatsApp — mostrar a proposta ajuda o cliente a entender o valor
+              do seu trabalho, não só ver um número.
+            </p>
+          </>
         )}
         <p className={`save-msg${saveError ? " is-error" : ""}`} role="status" aria-live="polite">
           {saveMsg}
@@ -557,18 +726,38 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
         <h2 className="panel-title">Resumo do orçamento</h2>
         <p className="microlabel">Equipe</p>
         <p>{formatBRL(calc.maoDeObraTotal)}</p>
+        {calc.encargosTotal > 0 && (
+          <>
+            <p className="microlabel">Encargos</p>
+            <p>{formatBRL(calc.encargosTotal)}</p>
+          </>
+        )}
+        {calc.proLaboreTotal > 0 && (
+          <>
+            <p className="microlabel">Seu pró-labore</p>
+            <p>{formatBRL(calc.proLaboreTotal)}</p>
+          </>
+        )}
         <p className="microlabel">Transporte e alimentação</p>
         <p>{formatBRL(calc.apoioTotal)}</p>
         <p className="microlabel">Materiais ({(calc.materialPct * 100).toFixed(0)}%)</p>
         <p>{formatBRL(calc.materiaisTotal)}</p>
         <p className="microlabel">Impostos</p>
         <p>{formatBRL(calc.impostoTotal)}</p>
+        {calc.gorduraValor > 0 && (
+          <>
+            <p className="microlabel">Gordura de segurança</p>
+            <p>{formatBRL(calc.gorduraValor)}</p>
+          </>
+        )}
         <p className="microlabel">Custo operacional total</p>
         <p>{formatBRL(calc.custosOperacionais)}</p>
         <hr style={{ borderColor: "var(--n-800)" }} />
         <p className="microlabel">Preço sugerido</p>
         <p style={{ fontSize: 22, fontWeight: 700, color: "var(--amber-400)" }}>{formatBRL(calc.valorFinal)}</p>
-        <p className="microlabel">Margem real: {(calc.margemReal * 100).toFixed(1)}%</p>
+        <p className={`microlabel${calc.margemAbaixoDoSaudavel ? " margin-summary-low" : ""}`}>
+          Margem real: {(calc.margemReal * 100).toFixed(1)}%{calc.margemAbaixoDoSaudavel ? " ⚠️ abaixo do recomendado" : ""}
+        </p>
         <p className="microlabel">Custo por m²: {formatBRL(calc.custoPorM2)}</p>
       </div>
       </div>

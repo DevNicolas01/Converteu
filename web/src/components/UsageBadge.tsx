@@ -1,10 +1,12 @@
 interface Props {
   used: number;
   limit: number | null;
+  /** Ex.: "neste mês" (planos pagos) ou "no total do plano Teste" (limite vitalício). */
+  periodLabel: string;
   onClick: () => void;
 }
 
-export default function UsageBadge({ used, limit, onClick }: Props) {
+export default function UsageBadge({ used, limit, periodLabel, onClick }: Props) {
   if (limit == null) {
     return (
       <button type="button" className="usage-badge usage-badge-unlimited" onClick={onClick} title="Ver plano e assinatura">
@@ -21,7 +23,7 @@ export default function UsageBadge({ used, limit, onClick }: Props) {
       type="button"
       className={`usage-badge usage-badge-${level}`}
       onClick={onClick}
-      title="Ver uso do plano e assinatura"
+      title={`${used} de ${limit} orçamentos usados ${periodLabel} — ver plano e assinatura`}
     >
       <span className="usage-badge-count">
         {used}/{limit} orçamentos
@@ -29,6 +31,7 @@ export default function UsageBadge({ used, limit, onClick }: Props) {
       <span className="usage-badge-track">
         <span className="usage-badge-fill" style={{ width: `${pct}%` }} />
       </span>
+      <span className="usage-badge-period">{periodLabel}</span>
     </button>
   );
 }

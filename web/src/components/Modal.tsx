@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
+import { CloseIcon } from "./Icons";
 
-export default function Modal({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+export default function Modal({
+  children,
+  onClose,
+  maxWidth = 420,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+  maxWidth?: number;
+}) {
   return (
     <div
       style={{
@@ -15,7 +24,10 @@ export default function Modal({ children, onClose }: { children: ReactNode; onCl
       }}
       onClick={onClose}
     >
-      <div style={{ maxWidth: 420, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ maxWidth, width: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-close-btn" aria-label="Fechar" onClick={onClose}>
+          <CloseIcon />
+        </button>
         {children}
       </div>
     </div>
