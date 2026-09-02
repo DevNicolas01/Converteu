@@ -117,6 +117,8 @@ export interface CompanyProfile {
   endereco?: string;
   telefone?: string;
   email?: string;
+  /** Frase curta sobre a empresa (ex: "10 anos de experiência em limpeza pós-obra") -- aparece no PDF. */
+  descricao?: string;
 }
 
 export async function getCompanyProfile(accountId: string): Promise<CompanyProfile> {

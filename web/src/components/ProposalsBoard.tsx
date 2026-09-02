@@ -1,5 +1,5 @@
 import { useId, useMemo, useState, type ReactElement } from "react";
-import { STAGES, FORMAS_PAGAMENTO, formatBRL, num, type Deal } from "../lib/calc";
+import { STAGES, FORMAS_PAGAMENTO, formatBRL, num, roundCents, type Deal } from "../lib/calc";
 import { buildWhatsAppShareLink } from "../lib/db";
 import { MESSAGE_TEMPLATES } from "../lib/templates";
 import { downloadClientPdf } from "../lib/pdf";
@@ -22,7 +22,14 @@ import {
 // Formas de pagamento recebidas à vista/na hora -- ao escolher uma delas, já preenchemos
 // o valor recebido como o valor total, porque na prática ninguém digita esse valor manualmente.
 // "Boleto" e "Parcelado" ficam de fora: o dinheiro pode levar dias pra cair ou vir em partes.
+// "Cartão de crédito" também entra aqui (assume à vista) -- mas se a pessoa marcar mais de 1
+// parcela, o dinheiro passa a cair aos poucos, então o valor recebido é zerado de novo
+// (ver handleParcelasChange).
 const AUTO_FULL_PAYMENT_METHODS = new Set(["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Transferência"]);
+
+// Formas que podem ser divididas em parcelas -- mostram o campo "em quantas vezes" e o botão
+// de somar uma parcela recebida por vez, em vez de um único campo "valor recebido" pra tudo.
+const INSTALLMENT_METHODS = new Set(["Cartão de crédito", "Parcelado"]);
 
 const PAYMENT_METHOD_ICONS: Record<string, ReactElement> = {
   Pix: <ZapIcon />,
@@ -48,7 +55,18 @@ interface Props {
   onDelete: (id: string) => void;
   onChangeStage: (deal: Deal, stage: string) => void;
   onSetFollowUpDate: (deal: Deal, date: string) => void;
-  onSetPagamento: (deal: Deal, patch: Partial<Pick<Deal, "formaPagamento" | "valorPago">>) => void;
+  onSetPagamento: (deal: Deal, patch: Partial<Pick<Deal, "formaPagamento" | "valorPago" | "parcelas">>) => void;
+}
+
+// Alguns orçamentos antigos ficaram com valores tipo "1106.086153846153" salvos (arredondamento
+// que escapou antes de existir o toFixed(2) nos botões rápidos) -- limpa pra 2 casas só quando
+// sobra precisão de mais, sem mexer no valor enquanto a pessoa ainda está digitando um decimal
+// normal (ex: "10." ou "10.5"), senão o cursor pula a cada tecla.
+function cleanValorPagoDisplay(raw: string): string {
+  if (!raw) return raw;
+  const dot = raw.indexOf(".");
+  if (dot === -1 || raw.length - dot - 1 <= 2) return raw;
+  return String(roundCents(num(raw)));
 }
 
 function daysSince(iso: string | null | undefined) {
@@ -76,12 +94,17 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
   const templateSelectId = useId();
   const formaPagamentoId = useId();
   const valorPagoId = useId();
+  const parcelasId = useId();
 
   const valorFinalNum = num(deal.valorFinal);
   const valorPagoNum = Math.min(num(deal.valorPago), valorFinalNum || num(deal.valorPago));
   const paymentStatus = valorFinalNum > 0 && valorPagoNum >= valorFinalNum ? "paid" : valorPagoNum > 0 ? "partial" : "unpaid";
   const paymentLabel = paymentStatus === "paid" ? "Pago" : paymentStatus === "partial" ? "Parcial" : "A receber";
   const paymentPct = valorFinalNum > 0 ? Math.min(100, (valorPagoNum / valorFinalNum) * 100) : 0;
+
+  const isInstallment = INSTALLMENT_METHODS.has(deal.formaPagamento);
+  const parcelasNum = Math.max(0, Math.floor(num(deal.parcelas)));
+  const valorPorParcela = parcelasNum > 1 && valorFinalNum > 0 ? roundCents(valorFinalNum / parcelasNum) : 0;
 
   // WhatsApp e e-mail não deixam anexar arquivo por link (limitação da própria plataforma,
   // não dá pra contornar via navegador) — então a gente baixa o PDF automaticamente e já
@@ -126,11 +149,35 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
   // Quem fecha a venda escolhe a forma de pagamento, mas quase nunca digita o valor recebido --
   // pra formas pagas à vista, já cravamos o valor total automaticamente (dá pra corrigir depois).
   function handleFormaPagamentoChange(value: string) {
-    const patch: Partial<Pick<Deal, "formaPagamento" | "valorPago">> = { formaPagamento: value };
+    const patch: Partial<Pick<Deal, "formaPagamento" | "valorPago" | "parcelas">> = { formaPagamento: value };
     if (AUTO_FULL_PAYMENT_METHODS.has(value) && valorFinalNum > 0) {
       patch.valorPago = String(valorFinalNum);
     }
+    // Trocar de forma de pagamento zera o "em quantas vezes" de uma escolha anterior -- senão o
+    // parcelamento de um método antigo (ex: Cartão de crédito em 6x) ficava escondido, mas ainda
+    // valendo, se a pessoa mudasse pra Pix e voltasse pra Cartão de crédito depois.
+    if (!INSTALLMENT_METHODS.has(value)) {
+      patch.parcelas = "";
+    }
     onSetPagamento(deal, patch);
+  }
+
+  // "Cartão de crédito" começa marcado como recebido à vista (ver handleFormaPagamentoChange) --
+  // mas se virar parcelado de verdade (mais de 1x), o dinheiro passa a cair aos poucos, não tudo
+  // de uma vez. Só zera o valor recebido se ele ainda estiver "intocado" no valor cheio do
+  // preenchimento automático -- se a pessoa já tiver ajustado manualmente, respeita o que ela pôs.
+  function handleParcelasChange(value: string) {
+    const patch: Partial<Pick<Deal, "parcelas" | "valorPago">> = { parcelas: value };
+    const n = Math.floor(num(value));
+    if (n > 1 && valorFinalNum > 0 && valorPagoNum === valorFinalNum) {
+      patch.valorPago = "0";
+    }
+    onSetPagamento(deal, patch);
+  }
+
+  function handleAddParcelaRecebida() {
+    const next = Math.min(valorFinalNum, roundCents(valorPagoNum + valorPorParcela));
+    onSetPagamento(deal, { valorPago: String(next) });
   }
 
   // "Fechado" e "Perdido" são decisões com peso (entram nos relatórios, "Fechado" libera o
@@ -185,6 +232,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
             <p className="payment-summary-method">
               <span className="payment-summary-method-icon">{PAYMENT_METHOD_ICONS[deal.formaPagamento]}</span>
               {deal.formaPagamento}
+              {isInstallment && parcelasNum > 1 ? ` em ${parcelasNum}x` : ""}
             </p>
           )}
         </div>
@@ -254,6 +302,49 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                 ))}
               </div>
 
+              {isInstallment && (
+                <div className="installment-box">
+                  {deal.formaPagamento === "Parcelado" && (
+                    <p className="microlabel" style={{ marginTop: 0, marginBottom: 8 }}>
+                      Use isso quando o parcelamento é combinado direto com o cliente, fora do cartão (ex: carnê, boleto em partes). Se ele pagou
+                      no cartão, mesmo que em várias vezes, escolha <strong>Cartão de crédito</strong> ali em cima.
+                    </p>
+                  )}
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label htmlFor={parcelasId}>Em quantas vezes?</label>
+                    <input
+                      id={parcelasId}
+                      className="input"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      placeholder="Ex: 12"
+                      value={deal.parcelas || ""}
+                      onChange={(e) => handleParcelasChange(e.target.value)}
+                    />
+                  </div>
+                  {parcelasNum > 1 && valorFinalNum > 0 && (
+                    <p className="microlabel" style={{ marginTop: 6, marginBottom: 0 }}>
+                      {parcelasNum}x de <strong>{formatBRL(valorPorParcela)}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!isInstallment && deal.formaPagamento === "Boleto" && (
+                <p className="microlabel" style={{ marginBottom: 10 }}>
+                  Boleto pode levar alguns dias pra compensar — volte aqui pra marcar quando o dinheiro cair.
+                </p>
+              )}
+
+              {!isInstallment &&
+                AUTO_FULL_PAYMENT_METHODS.has(deal.formaPagamento) &&
+                paymentStatus === "paid" && (
+                  <p className="microlabel" style={{ marginBottom: 10 }}>
+                    Já marcamos como recebido na hora — ajuste abaixo se for diferente.
+                  </p>
+                )}
+
               <div className="field payment-value-field">
                 <label htmlFor={valorPagoId}>Valor recebido</label>
                 <div className="currency-input">
@@ -265,7 +356,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
                     inputMode="decimal"
                     step="0.01"
                     min="0"
-                    value={deal.valorPago}
+                    value={cleanValorPagoDisplay(deal.valorPago)}
                     onChange={(e) => onSetPagamento(deal, { valorPago: e.target.value })}
                   />
                 </div>
@@ -273,6 +364,11 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
 
               {valorFinalNum > 0 && (
                 <div className="payment-quick-actions">
+                  {isInstallment && parcelasNum > 1 && paymentStatus !== "paid" && (
+                    <button type="button" className="quick-chip" onClick={handleAddParcelaRecebida}>
+                      + 1 parcela recebida
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`quick-chip${paymentStatus === "paid" ? " active" : ""}`}

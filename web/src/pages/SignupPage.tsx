@@ -16,9 +16,11 @@ const KIWIFY_CHECKOUT_URL = "";
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [descricao, setDescricao] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [lgpdConsent, setLgpdConsent] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -35,6 +37,10 @@ export default function SignupPage() {
     }
     if (password.length < 6) {
       setError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (!lgpdConsent) {
+      setError("Você precisa marcar a autorização de uso dos dados pra criar a conta.");
       return;
     }
     setError("");
@@ -58,7 +64,7 @@ export default function SignupPage() {
       });
       // Já aproveita o nome e o CNPJ/CPF que ele acabou de digitar, pra não pedir de novo
       // na primeira vez que entrar no app.
-      await saveCompanyProfile(uid, { companyName: companyName.trim(), cnpj: cpfCnpj.trim() });
+      await saveCompanyProfile(uid, { companyName: companyName.trim(), cnpj: cpfCnpj.trim(), descricao: descricao.trim() });
     } catch (err) {
       console.error("Falha ao criar a conta", err);
       const code = (err as { code?: string }).code;
@@ -117,6 +123,21 @@ export default function SignupPage() {
           </p>
         </div>
         <div className="field">
+          <label htmlFor="signup-descricao">Descrição da empresa (opcional)</label>
+          <textarea
+            id="signup-descricao"
+            className="input"
+            rows={2}
+            style={{ resize: "vertical" }}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Ex: Mais de 10 anos de experiência em limpeza pós-obra, atendendo toda a região."
+          />
+          <p className="panel-help" style={{ margin: "4px 0 0" }}>
+            Aparece no PDF dos seus orçamentos. Pode preencher depois, no seu perfil.
+          </p>
+        </div>
+        <div className="field">
           <label htmlFor="signup-email">E-mail</label>
           <input
             id="signup-email"
@@ -152,6 +173,13 @@ export default function SignupPage() {
             </button>
           </div>
         </div>
+        <label className="lgpd-check">
+          <input type="checkbox" checked={lgpdConsent} onChange={(e) => setLgpdConsent(e.target.checked)} required />
+          <span>
+            Autorizo o uso dos meus dados (nome da empresa, e-mail, CPF/CNPJ e demais dados que eu cadastrar) para criar minha conta, entrar em
+            contato comigo e dar suporte ao uso do Deal Shot, conforme a Lei Geral de Proteção de Dados (LGPD).
+          </span>
+        </label>
         <button className="save-btn signup-cta" type="submit" style={{ width: "100%" }} disabled={submitting}>
           {submitting ? "Criando..." : "Criar conta e ir pro pagamento"}
         </button>

@@ -461,6 +461,26 @@
   margin-top: 4px;
 }
 
+.lgpd-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 14px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--n-500);
+  cursor: pointer;
+}
+
+.lgpd-check input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: var(--amber-400);
+  cursor: pointer;
+}
+
 .signup-cta {
   transition: transform 0.12s ease, filter 0.12s ease;
 }
@@ -965,6 +985,11 @@
   padding: 32px;
   text-align: center;
   cursor: pointer;
+  /* Sem isso, um slide com mais conteúdo do que cabe na tela (ex: "O que está incluído" com
+     vários itens, ou uma observação de vistoria longa) ficava cortado sem nenhum jeito de ver o
+     resto -- crítico no celular, onde a altura é curta. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pres-slide {
@@ -1064,6 +1089,29 @@
 .pres-dot.active {
   background: var(--amber-400);
   width: 18px;
+}
+
+@media (max-width: 560px) {
+  .pres-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+  .pres-content {
+    padding: 20px 16px;
+  }
+  .pres-list {
+    line-height: 1.6;
+  }
+  .pres-nav {
+    padding: 10px;
+    gap: 12px;
+  }
+  .pres-nav button {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .checklist-panel {
@@ -1435,8 +1483,28 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  /* No celular, empilhar as 4 colunas inteiras uma embaixo da outra obrigava a rolar muito pra
+     chegar em "Fechado"/"Perdido", e cada coluna ainda tinha scroll interno próprio (rolagem
+     "presa" ao tocar dentro de um card). Em vez disso, vira um carrossel horizontal com scroll-snap
+     -- desliza pro lado pra trocar de etapa, como no Trello mobile, e cada coluna some no fim
+     da tela em vez de empilhar infinito. */
   .funil-grid {
-    grid-template-columns: minmax(220px, 1fr);
+    display: flex;
+    grid-template-columns: unset;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 4px;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .funil-col {
+    flex: 0 0 87%;
+    scroll-snap-align: start;
+  }
+
+  .funil-col-body {
+    max-height: min(60vh, 520px);
   }
 
   .account-card {
@@ -1454,6 +1522,25 @@
 
   main.main {
     padding: 8px;
+  }
+
+  /* Alvo de toque maior nos chips/pílulas mais usados no celular (funil de propostas) --
+     no desktop o tamanho compacto é ok (mouse é preciso), mas no touch é fácil errar o dedo. */
+  .stage-pill {
+    padding: 7px 13px;
+    font-size: 12.5px;
+  }
+
+  .icon-action-btn {
+    padding: 9px 13px;
+  }
+
+  .quick-chip {
+    padding: 7px 12px;
+  }
+
+  .payment-method-btn {
+    padding: 8px 12px;
   }
 }
 
@@ -1609,8 +1696,8 @@
 /* ---------- upgrade de assinatura ---------- */
 
 .upgrade-modal {
-  max-height: 88vh;
-  overflow-y: auto;
+  /* Scroll já é tratado pelo wrapper genérico do Modal -- duplicar max-height/overflow aqui
+     criava dois scrolls aninhados (o de fora rolava vazio, o de dentro é que rolava de verdade). */
   animation: panel-in 0.3s ease both;
 }
 
@@ -1749,25 +1836,29 @@
   padding-bottom: 16px;
 }
 
-/* Chips horizontais em vez de caixas empilhadas: numa coluna estreita do funil, uma grade com
-   ícone-em-cima-do-texto vira uma parede de caixas de 4 linhas. Chips que quebram linha natural
-   ocupam bem menos altura e ficam mais fáceis de escanear rápido. */
+/* Grid de 2 colunas com botões do mesmo tamanho -- chips de largura variável (flex-wrap) quebravam
+   linha em pontos diferentes conforme o texto (ex: "Pix" vs "Cartão de crédito"), deixando linhas
+   com quantidades desiguais de chips e o último método sozinho e "flutuando". Com 2 colunas fixas,
+   as linhas sempre alinham, mesmo quando o número de métodos é ímpar (a última fica só à esquerda,
+   sem sobrar espaço estranho no meio da linha). */
 .payment-method-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   margin-bottom: 14px;
 }
 
 .payment-method-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 8px;
   border: 1.5px solid var(--n-800);
-  border-radius: 999px;
+  border-radius: 10px;
   background: var(--n-950);
   color: var(--n-400);
+  text-align: center;
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
 }
 
@@ -1790,22 +1881,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .payment-method-icon .icon {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 
 .payment-method-label {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
-  white-space: nowrap;
 }
 
 .payment-value-field {
   margin-bottom: 0;
+}
+
+.installment-box {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--n-800);
+  border-radius: 8px;
+  background: var(--n-950);
 }
 
 .currency-input {

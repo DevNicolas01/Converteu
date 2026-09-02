@@ -30,6 +30,7 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
   const [endereco, setEndereco] = useState(initial.endereco || "");
   const [telefone, setTelefone] = useState(initial.telefone || "");
   const [email, setEmail] = useState(initial.email || "");
+  const [descricao, setDescricao] = useState(initial.descricao || "");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -53,7 +54,14 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
     setSaving(true);
     setMsg("");
     try {
-      const textData = { companyName: name.trim(), cnpj: cnpj.trim(), endereco: endereco.trim(), telefone: telefone.trim(), email: email.trim() };
+      const textData = {
+        companyName: name.trim(),
+        cnpj: cnpj.trim(),
+        endereco: endereco.trim(),
+        telefone: telefone.trim(),
+        email: email.trim(),
+        descricao: descricao.trim(),
+      };
       if (file && !canSaveLogo) {
         // Plano Teste: não sobe a logo pro Storage -- só guarda em base64 na tela, pra usar
         // nos PDFs gerados agora. Some se recarregar a página ou trocar de conta.
@@ -95,6 +103,21 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
       <div className="field">
         <label htmlFor="company-email">E-mail de contato (opcional)</label>
         <input id="company-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" />
+      </div>
+      <div className="field">
+        <label htmlFor="company-descricao">Descrição da empresa (opcional)</label>
+        <textarea
+          id="company-descricao"
+          className="input"
+          rows={2}
+          style={{ resize: "vertical" }}
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          placeholder="Ex: Mais de 10 anos de experiência em limpeza pós-obra, atendendo toda a região."
+        />
+        <p className="microlabel" style={{ marginTop: 4 }}>
+          Aparece logo abaixo do nome da empresa, no início do PDF dos orçamentos.
+        </p>
       </div>
       <div className="field">
         <span id="company-logo-label">Logo da empresa (opcional)</span>
@@ -140,11 +163,6 @@ export default function CompanySetupForm({ initial, onSave, onCancel, bare = fal
             />
           </div>
         </div>
-        {!canSaveLogo && (
-          <p className="microlabel" style={{ marginTop: 6 }}>
-            No plano Teste a logo não fica salva — mas aparece nos PDFs que você gerar agora, nesta sessão. Assine um plano pra manter a logo salva pra sempre.
-          </p>
-        )}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button className="save-btn" type="submit" style={{ width: "100%" }} disabled={saving}>

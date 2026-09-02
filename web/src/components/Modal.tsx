@@ -24,11 +24,14 @@ export default function Modal({
       }}
       onClick={onClose}
     >
-      <div style={{ maxWidth, width: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ maxWidth, width: "100%", maxHeight: "90vh", position: "relative" }} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-close-btn" aria-label="Fechar" onClick={onClose}>
           <CloseIcon />
         </button>
-        {children}
+        {/* Scroll fica num wrapper à parte -- o X é posicionado (absolute) relativo ao div de fora,
+            que não tem overflow, senão o próprio scroll corta o botão que fica ligeiramente pra
+            fora da borda (top: -14px). */}
+        <div style={{ maxHeight: "90vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>
       </div>
     </div>
   );

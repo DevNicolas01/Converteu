@@ -115,7 +115,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
         <Tile label="Fechados" value={String(fechados.length)} />
         <Tile label="Perdidos" value={String(perdidos.length)} />
         <Tile label="Taxa de conversão" value={`${taxaConversao.toFixed(0)}%`} hint="fechados ÷ (fechados + perdidos)" />
-        <Tile label="Ticket médio" value={formatBRL(ticketMedio)} hint="média só dos fechados" />
+        <Tile label="Venda média" value={formatBRL(ticketMedio)} hint="média só dos fechados" />
       </div>
 
       <div className="chart-grid" style={{ marginBottom: 16 }}>

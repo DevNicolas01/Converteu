@@ -33,6 +33,11 @@ type Tab = "calc" | "funil" | "painel";
 // true de novo quando os planos voltarem.
 const SHOW_PLAN_UI = false;
 
+// A princípio a logo nunca sobe pro Storage -- fica só no navegador de quem está usando (some ao
+// recarregar a página), pra não gravar nada no banco de dados por enquanto. Muda pra true quando
+// isso fizer sentido de novo (ex: ligado a um plano pago).
+const SAVE_LOGO_TO_SERVER = false;
+
 export default function AccountShell({ accountId, asAdmin = false }: { accountId: string; asAdmin?: boolean }) {
   const { logout } = useAuth();
   const { confirmDialog, alertDialog } = useDialog();
@@ -220,7 +225,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
     setDeals((ds) => ds.map((d) => (d.id === deal.id ? updated : d)));
   }
 
-  async function handleSetPagamento(deal: Deal, patch: Partial<Pick<Deal, "formaPagamento" | "valorPago">>) {
+  async function handleSetPagamento(deal: Deal, patch: Partial<Pick<Deal, "formaPagamento" | "valorPago" | "parcelas">>) {
     const updated = { ...deal, ...patch };
     await updateProposal(accountId, deal.id!, updated);
     setDeals((ds) => ds.map((d) => (d.id === deal.id ? updated : d)));
@@ -233,9 +238,7 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   }
 
   const planId = status.plan as PlanId | undefined;
-  // Persistir a logo no Storage é um recurso pago -- no Teste, só dá pra usá-la nos PDFs
-  // desta sessão (ephemeralLogoUrl), sem gravar no banco.
-  const canSaveLogo = planId !== "teste";
+  const canSaveLogo = SAVE_LOGO_TO_SERVER;
   const monthlyLimit = planLimit(planId);
   const usedForLimit = usedForPlanLimit(deals, planId, status.proposalsCreatedCount);
   const currentPlanLabel = PLANS.find((p) => p.id === planId)?.label || "atual";

@@ -230,6 +230,16 @@ async function buildProposalDoc(
   doc.text(deal.obraNome || "Orçamento de serviço", MARGIN_X, y);
   y += 9;
 
+  if (company.descricao) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...MUTED);
+    const lines = doc.splitTextToSize(company.descricao, CONTENT_W);
+    ensureSpace(lines.length * 4.5 + 4);
+    doc.text(lines, MARGIN_X, y);
+    y += lines.length * 4.5 + 6;
+  }
+
   sectionTitle("Dados do cliente e da obra");
   infoCard([
     ["Cliente", deal.clientName || "-"],

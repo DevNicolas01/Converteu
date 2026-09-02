@@ -486,7 +486,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 </span>
                 <strong>{formatBRL(estimateProductCostByArea(deal.clientType, num(deal.metragem)))}</strong>
                 <p className="microlabel" style={{ margin: 0, flexBasis: "100%" }}>
-                  Cruzamento de referência com base no tipo de imóvel — não entra na conta sozinho, ajuste os produtos abaixo comparando com esse número.
+                  Isso é só uma referência, baseada no tipo de imóvel — não entra sozinha na conta. Compare com os produtos que você lançar abaixo e ajuste se precisar.
                 </p>
               </div>
             )}
@@ -583,7 +583,7 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
             </button>
 
             <div className="material-pct-box">
-              <label htmlFor="qf-materialPctManual">% de materiais sobre o custo-base</label>
+              <label htmlFor="qf-materialPctManual">% de materiais sobre o custo do serviço</label>
               <div className="material-pct-input">
                 <input
                   id="qf-materialPctManual"
@@ -677,10 +677,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                   )}
                 </div>
                 <p className="microlabel" style={{ marginTop: 8 }}>
-                  O <strong>imposto</strong> (ex: alíquota do Simples Nacional) é calculado sobre o preço de venda, não sobre o custo — por isso
-                  entra junto com a margem na hora de calcular o preço sugerido, igual um markup. A <strong>gordura de segurança</strong> já
-                  entra automaticamente no custo pra cobrir desperdício de produto, pano/ferramenta estragada e imprevisto na obra. Deixe o valor
-                  final em branco pra usar o preço sugerido calculado abaixo.
+                  O <strong>imposto</strong> (ex: a porcentagem que você paga pelo Simples Nacional) incide sobre o preço de venda, não sobre o
+                  custo — por isso entra junto com a margem no cálculo do preço sugerido, do mesmo jeito. A <strong>gordura de segurança</strong>{" "}
+                  já entra automaticamente no custo pra cobrir desperdício de produto, pano/ferramenta estragada e imprevisto na obra. Deixe o
+                  valor final em branco pra usar o preço sugerido calculado abaixo.
                 </p>
               </div>
             </div>

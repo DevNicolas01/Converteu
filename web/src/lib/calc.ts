@@ -25,6 +25,8 @@ export interface Deal {
   formaPagamento: string;
   /** Valor já recebido do cliente (R$) — pode ser menor que valorFinal quando o pagamento é parcelado/faseado. */
   valorPago: string;
+  /** Só relevante quando formaPagamento é "Cartão de crédito" ou "Parcelado": em quantas vezes. */
+  parcelas: string;
 
   metragem: string;
   dias: string;
@@ -149,6 +151,7 @@ export function emptyDeal(): Deal {
     followUpDate: "",
     formaPagamento: "",
     valorPago: "0",
+    parcelas: "",
 
     metragem: "",
     dias: "",

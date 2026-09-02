@@ -700,7 +700,7 @@ export default function AdminOverviewPage() {
                             <p>{(s?.taxaConversao ?? 0).toFixed(0)}%</p>
                           </div>
                           <div>
-                            <p className="microlabel">Ticket médio (fechados)</p>
+                            <p className="microlabel">Venda média (fechados)</p>
                             <p>{formatBRL(s?.ticketMedio)}</p>
                           </div>
                           <div>
