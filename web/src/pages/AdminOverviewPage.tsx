@@ -12,6 +12,7 @@ import {
   adminListAdmins,
   adminAddAdmin,
   adminRemoveAdmin,
+  adminCreateTestAccount,
   type AdminAccount,
   type AdminAccountStats,
   type AdminCompanyProfile,
@@ -135,6 +136,16 @@ export default function AdminOverviewPage() {
   const [adminMsgError, setAdminMsgError] = useState(false);
   const [addingAdmin, setAddingAdmin] = useState(false);
 
+  const [showCreateTest, setShowCreateTest] = useState(false);
+  const [newTestCompany, setNewTestCompany] = useState("");
+  const [newTestEmail, setNewTestEmail] = useState("");
+  // Padrão "sem_limite": conta de teste criada pelo admin é pra demonstração/parceria, não deve
+  // esbarrar no limite de 3 orçamentos do plano Teste normal. O admin pode trocar no formulário.
+  const [newTestPlan, setNewTestPlan] = useState<string>("sem_limite");
+  const [creatingTest, setCreatingTest] = useState(false);
+  const [createTestMsg, setCreateTestMsg] = useState("");
+  const [createTestMsgError, setCreateTestMsgError] = useState(false);
+
   async function loadAdmins() {
     try {
       setAdmins(await adminListAdmins());
@@ -175,6 +186,36 @@ export default function AdminOverviewPage() {
     } catch (e) {
       console.error("Falha ao remover admin", e);
       await alertDialog("Não foi possível remover.");
+    }
+  }
+
+  async function handleCreateTestAccount(e: FormEvent) {
+    e.preventDefault();
+    if (!newTestCompany.trim() || !newTestEmail.trim()) {
+      setCreateTestMsgError(true);
+      setCreateTestMsg("Informe a empresa e o e-mail do cliente.");
+      return;
+    }
+    setCreatingTest(true);
+    setCreateTestMsg("Criando...");
+    setCreateTestMsgError(false);
+    try {
+      await adminCreateTestAccount(newTestCompany.trim(), newTestEmail.trim(), newTestPlan);
+      setCreateTestMsg("Conta criada! O cliente recebe um e-mail pra definir a senha e já pode entrar.");
+      setNewTestCompany("");
+      setNewTestEmail("");
+      setNewTestPlan("sem_limite");
+      await loadAccounts();
+    } catch (e) {
+      const err = e as { code?: string; message?: string };
+      setCreateTestMsgError(true);
+      if (err.code === "auth/email-already-in-use") {
+        setCreateTestMsg("Já existe uma conta com esse e-mail.");
+      } else {
+        setCreateTestMsg("Não foi possível criar: " + (err.code || err.message || String(e)));
+      }
+    } finally {
+      setCreatingTest(false);
     }
   }
 
@@ -458,7 +499,63 @@ export default function AdminOverviewPage() {
 
         {!loading && !loadError && tab === "clientes" && (
           <section className="panel" style={{ margin: 16 }}>
-            <h2 className="panel-title">Clientes</h2>
+            <div className="panel-header">
+              <h2 className="panel-title" style={{ margin: 0 }}>
+                Clientes
+              </h2>
+              <button type="button" className="icon-action-btn primary" onClick={() => setShowCreateTest((s) => !s)}>
+                {showCreateTest ? "Cancelar" : "+ Criar conta de teste"}
+              </button>
+            </div>
+
+            {showCreateTest && (
+              <div className="cost-group" style={{ marginBottom: 16 }}>
+                <p className="cost-group-title">Nova conta de teste pra um cliente</p>
+                <p className="panel-help" style={{ marginTop: 0 }}>
+                  Cria a conta na hora, sem passar pela tela de cadastro. O cliente recebe um e-mail pra definir a própria senha e já entra
+                  direto no app.
+                </p>
+                <form onSubmit={handleCreateTestAccount}>
+                  <div className="cost-group-fields">
+                    {(() => {
+                      const id = "new-test-company";
+                      return (
+                        <div className="field field-wide">
+                          <label htmlFor={id}>Nome da empresa</label>
+                          <input id={id} className="input" value={newTestCompany} onChange={(e) => setNewTestCompany(e.target.value)} />
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const id = "new-test-email";
+                      return (
+                        <div className="field field-wide">
+                          <label htmlFor={id}>E-mail do cliente</label>
+                          <input id={id} className="input" type="email" value={newTestEmail} onChange={(e) => setNewTestEmail(e.target.value)} />
+                        </div>
+                      );
+                    })()}
+                    <div className="field">
+                      <label htmlFor="new-test-plan">Plano</label>
+                      <select id="new-test-plan" className="input" value={newTestPlan} onChange={(e) => setNewTestPlan(e.target.value)}>
+                        {PLANS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button className="save-btn" type="submit" style={{ marginTop: 12 }} disabled={creatingTest}>
+                    {creatingTest ? "Criando..." : "Criar conta"}
+                  </button>
+                  <p className={`save-msg${createTestMsgError ? " is-error" : ""}`} role="status" aria-live="polite">
+                    {createTestMsg}
+                  </p>
+                </form>
+              </div>
+            )}
+
             <div className="field-grid" style={{ marginBottom: 16 }}>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label htmlFor="account-search" className="microlabel">
