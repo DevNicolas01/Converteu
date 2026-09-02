@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { PLANS, PLAN_PRICES, planLimit, type PlanId } from "../lib/calc";
-import { Tile, CircleChart } from "../components/charts";
+import { PLANS, PLAN_PRICES, planLimit, type PlanId, type BillingCycle } from "../lib/calc";
+import { Tile, CircleChart, BarRow, LineChart } from "../components/charts";
 import {
   adminListAccounts,
   adminGetDashboardStats,
   adminGetCompanyProfiles,
   adminRenewSubscription,
   adminSetAccountStatus,
+  adminSetAccountPlan,
+  adminSetAccountNotes,
   adminDeleteAccount,
   adminListAdmins,
   adminAddAdmin,
@@ -21,7 +23,7 @@ import {
 import { useAuth } from "../context/useAuth";
 import { useDialog } from "../context/useDialog";
 import ThemeToggle from "../components/ThemeToggle";
-import { LogoutIcon } from "../components/Icons";
+import { LogoutIcon, ChevronDownIcon } from "../components/Icons";
 
 function formatBRL(value: number | undefined) {
   return (value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -94,6 +96,53 @@ function StatusBadge({ status, isExpired }: { status: string | undefined; isExpi
   );
 }
 
+function csvCell(v: unknown): string {
+  const s = String(v ?? "");
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Exporta a lista de contas visível (já filtrada/ordenada) pra CSV -- ";" como separador porque é
+ * o que o Excel em português espera (vírgula ali é separador decimal, não de coluna). */
+function downloadAccountsCsv(
+  rows: AdminAccount[],
+  stats: Record<string, AdminAccountStats>,
+  displayNameOf: (acc: AdminAccount) => string,
+) {
+  const header = ["Empresa", "E-mail", "Status", "Plano", "Ciclo", "Vencimento", "Orçamentos no mês", "Faturado (fechados)", "Cliente desde"];
+  const lines = [header.map(csvCell).join(";")];
+  rows.forEach((acc) => {
+    const s = stats[acc.id];
+    const expiresAt = toDate(acc.subscriptionExpiresAt);
+    const isExpired = expiresAt ? expiresAt < new Date() : true;
+    const createdAt = toDate(acc.createdAt);
+    lines.push(
+      [
+        displayNameOf(acc),
+        acc.email || "",
+        STATUS_META[statusKey(acc.status, isExpired)].label,
+        PLANS.find((p) => p.id === acc.plan)?.label || "Sem plano",
+        acc.billingCycle === "anual" ? "Anual" : "Mensal",
+        expiresAt ? expiresAt.toLocaleDateString("pt-BR") : "",
+        String(s?.orcamentosEsteMes ?? 0),
+        String(s?.valorTotalFechado ?? 0).replace(".", ","),
+        createdAt ? createdAt.toLocaleDateString("pt-BR") : "",
+      ]
+        .map(csvCell)
+        .join(";"),
+    );
+  });
+  // BOM no início -- sem isso o Excel abre acentos (ç, ã, é) quebrados por assumir outro encoding.
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clientes-deal-shot-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function monthlyValue(plan: string | undefined, billingCycle: string | undefined): number {
   if (!plan || plan === "teste" || !(plan in PLAN_PRICES)) return 0;
   const price = PLAN_PRICES[plan as Exclude<PlanId, "teste">][billingCycle === "anual" ? "anual" : "mensal"];
@@ -129,6 +178,10 @@ export default function AdminOverviewPage() {
   const [planFilter, setPlanFilter] = useState<string>("todos");
   const [sortBy, setSortBy] = useState<"nome" | "vencimento" | "faturado">("nome");
   const [renewMonths, setRenewMonths] = useState<Record<string, number>>({});
+  const [planEdits, setPlanEdits] = useState<Record<string, { plan: string; billingCycle: BillingCycle }>>({});
+  const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
 
   const [admins, setAdmins] = useState<AdminEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -254,6 +307,34 @@ export default function AdminOverviewPage() {
     }
   }
 
+  async function handleSetPlan(acc: AdminAccount) {
+    const edit = planEdits[acc.id] || { plan: acc.plan || "start", billingCycle: (acc.billingCycle as BillingCycle) || "mensal" };
+    setSavingPlanId(acc.id);
+    try {
+      await adminSetAccountPlan(acc.id, edit.plan, edit.billingCycle);
+      await loadAccounts();
+    } catch (e) {
+      console.error("Falha ao trocar o plano", e);
+      await alertDialog("Não foi possível trocar o plano.");
+    } finally {
+      setSavingPlanId(null);
+    }
+  }
+
+  async function handleSaveNotes(accountId: string) {
+    const notes = noteDrafts[accountId] ?? "";
+    setSavingNoteId(accountId);
+    try {
+      await adminSetAccountNotes(accountId, notes.trim());
+      await loadAccounts();
+    } catch (e) {
+      console.error("Falha ao salvar anotação", e);
+      await alertDialog("Não foi possível salvar a anotação.");
+    } finally {
+      setSavingNoteId(null);
+    }
+  }
+
   async function handleToggleStatus(accountId: string, currentStatus: string | undefined) {
     const next = currentStatus === "active" ? "suspended" : "active";
     if (
@@ -335,6 +416,31 @@ export default function AdminOverviewPage() {
       })
       .filter((x) => x.urgent);
   }, [accounts]);
+
+  const novasContasPorMes = useMemo(() => {
+    const now = new Date();
+    const months: { label: string; value: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = ref.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+      const count = accounts.filter((acc) => {
+        const c = toDate(acc.createdAt);
+        return c && c.getFullYear() === ref.getFullYear() && c.getMonth() === ref.getMonth();
+      }).length;
+      months.push({ label, value: count });
+    }
+    return months;
+  }, [accounts]);
+
+  const topClientes = useMemo(() => {
+    return accounts
+      .map((acc) => ({ acc, valor: stats[acc.id]?.valorTotalFechado ?? 0 }))
+      .filter((x) => x.valor > 0)
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts, stats, profiles]);
+  const maxTopCliente = Math.max(1, ...topClientes.map((c) => c.valor));
 
   const visibleAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -461,6 +567,25 @@ export default function AdminOverviewPage() {
                 </div>
               </div>
             </div>
+
+            <div className="chart-grid" style={{ margin: 16, marginTop: 0 }}>
+              <div className="chart-card" style={{ gridColumn: "span 2" }}>
+                <p className="chart-title">Contas novas nos últimos 6 meses</p>
+                <LineChart points={novasContasPorMes} />
+              </div>
+              <div className="chart-card">
+                <p className="chart-title">Quem mais fatura</p>
+                {topClientes.length === 0 ? (
+                  <p className="chart-empty">Nenhum fechado ainda.</p>
+                ) : (
+                  <div className="funnel">
+                    {topClientes.map(({ acc, valor }) => (
+                      <BarRow key={acc.id} label={displayNameOf(acc)} metric={valor} max={maxTopCliente} color="var(--amber-400)" display={formatBRL(valor)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         )}
 
@@ -503,9 +628,19 @@ export default function AdminOverviewPage() {
               <h2 className="panel-title" style={{ margin: 0 }}>
                 Clientes
               </h2>
-              <button type="button" className="icon-action-btn primary" onClick={() => setShowCreateTest((s) => !s)}>
-                {showCreateTest ? "Cancelar" : "+ Criar conta de teste"}
-              </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="icon-action-btn"
+                  onClick={() => downloadAccountsCsv(visibleAccounts, stats, displayNameOf)}
+                  disabled={visibleAccounts.length === 0}
+                >
+                  Exportar CSV ({visibleAccounts.length})
+                </button>
+                <button type="button" className="icon-action-btn primary" onClick={() => setShowCreateTest((s) => !s)}>
+                  {showCreateTest ? "Cancelar" : "+ Criar conta de teste"}
+                </button>
+              </div>
             </div>
 
             {showCreateTest && (
@@ -564,6 +699,7 @@ export default function AdminOverviewPage() {
                 <input
                   id="account-search"
                   className="input"
+                  type="search"
                   placeholder="Buscar por empresa ou e-mail..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -608,6 +744,12 @@ export default function AdminOverviewPage() {
               </div>
             </div>
 
+            {accounts.length > 0 && (search || statusFilter !== "todos" || planFilter !== "todos") && (
+              <p className="microlabel" style={{ marginBottom: 8 }}>
+                {visibleAccounts.length} de {accounts.length} contas
+              </p>
+            )}
+
             <div className="client-rows">
               {accounts.length === 0 && <p>Nenhuma conta ainda.</p>}
               {accounts.length > 0 && visibleAccounts.length === 0 && <p>Nenhuma conta bate com esse filtro.</p>}
@@ -635,6 +777,11 @@ export default function AdminOverviewPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <strong>{displayName}</strong>
                           <StatusBadge status={acc.status} isExpired={isExpired} />
+                          {!!acc.notes && (
+                            <span title={acc.notes} aria-label={`Anotação: ${acc.notes}`} style={{ fontSize: 13 }}>
+                              📝
+                            </span>
+                          )}
                         </div>
                         <p className="microlabel">{acc.email}</p>
                       </div>
@@ -672,8 +819,15 @@ export default function AdminOverviewPage() {
                         <Link className="icon-action-btn primary" to={`/admin/contas/${acc.id}`} target="_blank" rel="noopener">
                           Ver como cliente
                         </Link>
-                        <button className="icon-action-btn" onClick={() => setExpandedId(isExpanded ? null : acc.id)} aria-expanded={isExpanded}>
-                          {isExpanded ? "▲" : "▼"}
+                        <button
+                          className="icon-action-btn"
+                          onClick={() => setExpandedId(isExpanded ? null : acc.id)}
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? "Recolher detalhes" : "Ver detalhes"}
+                        >
+                          <span className={`chevron${isExpanded ? " chevron-up" : ""}`}>
+                            <ChevronDownIcon />
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -724,17 +878,108 @@ export default function AdminOverviewPage() {
                             <p style={{ fontSize: 11, wordBreak: "break-all" }}>{acc.id}</p>
                           </div>
                         </div>
+
+                        <div className="cost-group" style={{ marginTop: 14 }}>
+                          <p className="cost-group-title">Plano da conta</p>
+                          <div className="cost-group-fields">
+                            <div className="field">
+                              <label htmlFor={`plan-select-${acc.id}`}>Plano</label>
+                              <select
+                                id={`plan-select-${acc.id}`}
+                                className="input"
+                                value={planEdits[acc.id]?.plan ?? acc.plan ?? "start"}
+                                onChange={(e) =>
+                                  setPlanEdits((m) => ({
+                                    ...m,
+                                    [acc.id]: { billingCycle: m[acc.id]?.billingCycle ?? (acc.billingCycle as BillingCycle) ?? "mensal", plan: e.target.value },
+                                  }))
+                                }
+                              >
+                                {PLANS.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="field">
+                              <label htmlFor={`plan-cycle-${acc.id}`}>Ciclo</label>
+                              <select
+                                id={`plan-cycle-${acc.id}`}
+                                className="input"
+                                value={planEdits[acc.id]?.billingCycle ?? (acc.billingCycle as BillingCycle) ?? "mensal"}
+                                onChange={(e) =>
+                                  setPlanEdits((m) => ({
+                                    ...m,
+                                    [acc.id]: { plan: m[acc.id]?.plan ?? acc.plan ?? "start", billingCycle: e.target.value as BillingCycle },
+                                  }))
+                                }
+                              >
+                                <option value="mensal">Mensal</option>
+                                <option value="anual">Anual</option>
+                              </select>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="icon-action-btn primary"
+                            style={{ marginTop: 8 }}
+                            disabled={savingPlanId === acc.id}
+                            onClick={() => handleSetPlan(acc)}
+                          >
+                            {savingPlanId === acc.id ? "Salvando..." : "Salvar plano"}
+                          </button>
+                          <p className="microlabel" style={{ marginTop: 6 }}>
+                            Isso não mexe no vencimento — pra estender o acesso, use "Renovar" abaixo.
+                          </p>
+                        </div>
+
+                        <div className="cost-group" style={{ marginTop: 14 }}>
+                          <p className="cost-group-title">Anotação interna</p>
+                          <textarea
+                            className="input"
+                            rows={2}
+                            style={{ resize: "vertical" }}
+                            placeholder="Ex: combinou pagar dia 10, veio de indicação do Fulano..."
+                            value={noteDrafts[acc.id] ?? acc.notes ?? ""}
+                            onChange={(e) => setNoteDrafts((m) => ({ ...m, [acc.id]: e.target.value }))}
+                          />
+                          <button
+                            type="button"
+                            className="icon-action-btn"
+                            style={{ marginTop: 8 }}
+                            disabled={savingNoteId === acc.id}
+                            onClick={() => handleSaveNotes(acc.id)}
+                          >
+                            {savingNoteId === acc.id ? "Salvando..." : "Salvar anotação"}
+                          </button>
+                          <p className="microlabel" style={{ marginTop: 6 }}>
+                            Só você vê isso — o cliente nunca vê essa anotação.
+                          </p>
+                        </div>
+
                         <div className="account-actions-row" style={{ marginTop: 14 }}>
+                          <span className="microlabel">Renovar:</span>
+                          <button type="button" className="quick-chip" onClick={() => handleRenew(acc.id, 1)}>
+                            +1 mês
+                          </button>
+                          <button type="button" className="quick-chip" onClick={() => handleRenew(acc.id, 3)}>
+                            +3 meses
+                          </button>
+                          <button type="button" className="quick-chip" onClick={() => handleRenew(acc.id, 12)}>
+                            +12 meses
+                          </button>
                           <span className="renew-inline">
                             <input
                               className="input"
                               type="number"
                               min={1}
+                              aria-label="Outra quantidade de meses"
                               value={renewMonths[acc.id] ?? 1}
                               onChange={(e) => setRenewMonths((m) => ({ ...m, [acc.id]: Number(e.target.value) || 1 }))}
                             />
                             <button className="icon-action-btn" onClick={() => handleRenew(acc.id, renewMonths[acc.id] ?? 1)}>
-                              Renovar mês(es)
+                              Renovar
                             </button>
                           </span>
                           <button

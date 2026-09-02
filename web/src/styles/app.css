@@ -1394,6 +1394,20 @@
   color: #fff;
 }
 
+.chevron {
+  display: inline-flex;
+  transition: transform 0.15s ease;
+}
+
+.chevron .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.chevron-up {
+  transform: rotate(180deg);
+}
+
 .account-actions-row {
   display: flex;
   gap: 6px;

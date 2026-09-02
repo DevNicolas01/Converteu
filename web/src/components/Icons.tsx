@@ -295,6 +295,14 @@ export function CloseIcon() {
   );
 }
 
+export function ChevronDownIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  );
+}
+
 export function LogoutIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">

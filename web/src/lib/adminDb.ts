@@ -23,6 +23,8 @@ export interface AdminAccount {
   plan?: string;
   billingCycle?: string;
   subscriptionExpiresAt?: { toDate?: () => Date } | Date | null;
+  /** Anotação livre do admin sobre a conta -- só visível no painel admin. */
+  notes?: string;
   [key: string]: unknown;
 }
 
@@ -141,6 +143,16 @@ export async function adminRenewSubscription(accountId: string, months: number) 
 
 export async function adminSetAccountStatus(accountId: string, status: string) {
   await updateDoc(doc(db, "accounts", accountId), { status });
+}
+
+/** Troca o plano/ciclo de cobrança da conta na mão -- não mexe no vencimento (isso é só via adminRenewSubscription). */
+export async function adminSetAccountPlan(accountId: string, plan: string, billingCycle: string) {
+  await updateDoc(doc(db, "accounts", accountId), { plan, billingCycle });
+}
+
+/** Anotação livre do admin sobre a conta (ex: "combinou pagar dia 10") -- só o admin vê, não aparece pro cliente. */
+export async function adminSetAccountNotes(accountId: string, notes: string) {
+  await updateDoc(doc(db, "accounts", accountId), { notes });
 }
 
 /**
