@@ -27,7 +27,15 @@ export function BarRow({ label, metric, max, color, display }: { label: string; 
   );
 }
 
-export function CircleChart({ data, hole = 0 }: { data: { label: string; value: number; color: string }[]; hole?: number }) {
+export function CircleChart({
+  data,
+  hole = 0,
+  formatValue = (v: number) => String(v),
+}: {
+  data: { label: string; value: number; color: string }[];
+  hole?: number;
+  formatValue?: (v: number) => string;
+}) {
   const size = 150;
   const r = size / 2;
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -68,7 +76,7 @@ export function CircleChart({ data, hole = 0 }: { data: { label: string; value: 
         {slices.map((s) => (
           <span className="legend-item" key={s.label}>
             <span className="legend-swatch" style={{ background: s.color }} />
-            {s.label} — {s.value} ({(s.frac * 100).toFixed(0)}%)
+            {s.label} — {formatValue(s.value)} ({(s.frac * 100).toFixed(0)}%)
           </span>
         ))}
       </div>

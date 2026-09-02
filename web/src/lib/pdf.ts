@@ -264,9 +264,9 @@ async function buildProposalDoc(
         rows.push({ label: `Produto: ${p.nome || "-"} (${qtd}x)`, value: formatBRL(subtotal) });
       });
     rows.push({ label: "Materiais (total)", value: formatBRL(calc.materiaisTotal) });
-    rows.push({ label: "Impostos", value: formatBRL(calc.impostoTotal) });
     if (calc.gorduraValor > 0) rows.push({ label: "Gordura de segurança", value: formatBRL(calc.gorduraValor) });
     rows.push({ label: "Custo total do serviço", value: formatBRL(calc.custosOperacionais), emphasis: true });
+    if (calc.impostoTotal > 0) rows.push({ label: "Imposto sobre a venda", value: formatBRL(calc.impostoTotal) });
     rows.push({ label: "Lucro estimado", value: formatBRL(calc.lucroRS), emphasis: true });
     rows.push({ label: "Margem real", value: `${(calc.margemReal * 100).toFixed(1)}%`, emphasis: true });
     costsTable(rows);

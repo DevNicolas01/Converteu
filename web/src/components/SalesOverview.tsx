@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { formatBRL, num, isThisMonth, calcDeal, STAGES, type Deal } from "../lib/calc";
+import { formatBRL, num, isThisMonth, calcDeal, roundCents, STAGES, type Deal } from "../lib/calc";
 import { Tile, BarRow, CircleChart, LineChart } from "./charts";
 
 const CAT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)", "var(--cat-6)"];
@@ -26,20 +26,20 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
   const perdidos = base.filter((d) => d.stage === "perdido");
   const aguardando = base.filter((d) => d.stage === "aguardando");
 
-  const valorVendido = fechados.reduce((s, d) => s + num(d.valorFinal), 0);
-  const valorPerdido = perdidos.reduce((s, d) => s + num(d.valorFinal), 0);
-  const valorEmAberto = aguardando.reduce((s, d) => s + num(d.valorFinal), 0);
+  const valorVendido = roundCents(fechados.reduce((s, d) => s + num(d.valorFinal), 0));
+  const valorPerdido = roundCents(perdidos.reduce((s, d) => s + num(d.valorFinal), 0));
+  const valorEmAberto = roundCents(aguardando.reduce((s, d) => s + num(d.valorFinal), 0));
 
   const decididas = fechados.length + perdidos.length;
   const taxaConversao = decididas > 0 ? (fechados.length / decididas) * 100 : 0;
-  const ticketMedio = fechados.length > 0 ? valorVendido / fechados.length : 0;
+  const ticketMedio = fechados.length > 0 ? roundCents(valorVendido / fechados.length) : 0;
 
-  const valorPago = fechados.reduce((s, d) => s + Math.min(num(d.valorPago), num(d.valorFinal)), 0);
-  const valorNaoPago = valorVendido - valorPago;
+  const valorPago = roundCents(fechados.reduce((s, d) => s + Math.min(num(d.valorPago), num(d.valorFinal)), 0));
+  const valorNaoPago = roundCents(valorVendido - valorPago);
   const pagoPct = valorVendido > 0 ? (valorPago / valorVendido) * 100 : 0;
 
-  const custosOperacionais = fechados.reduce((s, d) => s + calcDeal(d).custosOperacionais, 0);
-  const saldo = valorVendido - custosOperacionais;
+  const custosOperacionais = roundCents(fechados.reduce((s, d) => s + calcDeal(d).custosOperacionais, 0));
+  const saldo = roundCents(valorVendido - custosOperacionais);
 
   const porCliente = useMemo(() => {
     const map = new Map<string, number>();
@@ -115,7 +115,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
         <Tile label="Fechados" value={String(fechados.length)} />
         <Tile label="Perdidos" value={String(perdidos.length)} />
         <Tile label="Taxa de conversão" value={`${taxaConversao.toFixed(0)}%`} hint="fechados ÷ (fechados + perdidos)" />
-        <Tile label="Ticket médio" value={formatBRL(ticketMedio)} />
+        <Tile label="Ticket médio" value={formatBRL(ticketMedio)} hint="média só dos fechados" />
       </div>
 
       <div className="chart-grid" style={{ marginBottom: 16 }}>
@@ -133,7 +133,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
           <p className="chart-title">Faturamento</p>
           <div style={{ display: "grid", gap: 10 }}>
             <Tile label="Faturado (fechados)" value={formatBRL(valorVendido)} />
-            <Tile label="Em aberto (aguardando)" value={formatBRL(valorEmAberto)} />
+            <Tile label="Aguardando resposta" value={formatBRL(valorEmAberto)} />
             <Tile label="Perdido" value={formatBRL(valorPerdido)} />
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
           <p className="chart-title">Custos e saldo dos fechados</p>
           <div style={{ display: "grid", gap: 10 }}>
             <Tile label="Custos operacionais" value={formatBRL(custosOperacionais)} hint="soma dos custos calculados de cada fechado" />
-            <Tile label="Saldo (lucro)" value={formatBRL(saldo)} />
+            <Tile label="Saldo (lucro)" value={formatBRL(saldo)} hint="faturado − custos operacionais" />
           </div>
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function SalesOverview({ deals }: { deals: Deal[] }) {
           {porFormaPagamento.length === 0 ? (
             <p className="chart-empty">Nenhum fechado ainda.</p>
           ) : (
-            <CircleChart data={porFormaPagamento} />
+            <CircleChart data={porFormaPagamento} formatValue={formatBRL} />
           )}
         </div>
 

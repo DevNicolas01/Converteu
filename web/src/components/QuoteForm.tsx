@@ -70,11 +70,20 @@ interface AffixInputProps extends InputHTMLAttributes<HTMLInputElement> {
   suffix?: string;
 }
 
-function AffixInput({ prefix, suffix, className, ...rest }: AffixInputProps) {
+function AffixInput({ prefix, suffix, className, onFocus, ...rest }: AffixInputProps) {
   return (
     <div className="currency-input">
       {prefix && <span className="currency-prefix">{prefix}</span>}
-      <input className={`input currency-input-field${className ? ` ${className}` : ""}`} {...rest} />
+      <input
+        className={`input currency-input-field${className ? ` ${className}` : ""}`}
+        // Seleciona tudo ao focar -- sem isso, digitar por cima de um "0" pré-existente sem
+        // apagar antes gera "020" em vez de "20" (o cursor só entra antes do dígito).
+        onFocus={(e) => {
+          e.target.select();
+          onFocus?.(e);
+        }}
+        {...rest}
+      />
       {suffix && <span className="currency-suffix">{suffix}</span>}
     </div>
   );
@@ -153,6 +162,15 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
     if (!deal.clientName.trim()) {
       setSaveError(true);
       setSaveMsg("Preencha o nome do cliente.");
+      setStep(0);
+      return;
+    }
+    // Trava mínima pra não salvar um orçamento "vazio" (0 dias de serviço, ninguém na equipe) --
+    // sem isso dava pra passar pelas 5 etapas sem preencher nada e o orçamento ia pra Propostas
+    // com R$ 0,00, virando lixo no funil.
+    if (num(deal.dias) <= 0) {
+      setSaveError(true);
+      setSaveMsg("Informe ao menos 1 dia de serviço.");
       setStep(0);
       return;
     }
@@ -443,6 +461,9 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                   {field("Estacionamento", <AffixInput type="number" prefix="R$" value={deal.estacionamento} onChange={(e) => set("estacionamento", e.target.value)} />, "estacionamento")}
                   {field("Pedágio", <AffixInput type="number" prefix="R$" value={deal.pedagio} onChange={(e) => set("pedagio", e.target.value)} />, "pedagio")}
                 </div>
+                <p className="microlabel" style={{ marginTop: 8 }}>
+                  Valor total do serviço todo, não por dia — diferente de vale-transporte, alimentação e combustível acima.
+                </p>
                 <p className="cost-group-subtotal">{formatBRL(num(deal.estacionamento) + num(deal.pedagio))} no total</p>
               </div>
             </div>
@@ -575,7 +596,8 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <span className="material-pct-suffix">%</span>
               </div>
               <p className="microlabel" style={{ marginTop: 6 }}>
-                Deixe em branco pra calcular automático com base nos produtos informados (agora: {(calc.materialPct * 100).toFixed(0)}%).
+                Deixe em branco pra calcular automático (agora: {(calc.materialPct * 100).toFixed(0)}%) — o percentual sobe conforme o custo do
+                serviço cresce (4% até R$ 1.000, 8% até R$ 2.000, 12% acima disso), pra cobrir mais desperdício em serviços maiores.
               </p>
             </div>
 
@@ -599,8 +621,6 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                     <AffixInput type="number" prefix="R$" value={deal.rateioAdm} onChange={(e) => set("rateioAdm", e.target.value)} />,
                     "rateioAdm",
                   )}
-                  {field("Nota fiscal", <AffixInput type="number" prefix="R$" value={deal.valorNota} onChange={(e) => set("valorNota", e.target.value)} />, "valorNota")}
-                  {field("Imposto", <AffixInput type="number" suffix="%" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />, "impostoPct")}
                 </div>
 
                 <button type="button" className="link-btn" style={{ marginTop: 8 }} onClick={() => setShowRateioHelper((s) => !s)}>
@@ -640,6 +660,11 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                 <div className="cost-group-fields">
                   {field("Margem desejada", <AffixInput type="number" suffix="%" value={deal.margem} onChange={(e) => set("margem", e.target.value)} />, "margem")}
                   {field(
+                    "Imposto sobre a venda",
+                    <AffixInput type="number" suffix="%" value={deal.impostoPct} onChange={(e) => set("impostoPct", e.target.value)} />,
+                    "impostoPct",
+                  )}
+                  {field(
                     "Gordura de segurança",
                     <AffixInput type="number" suffix="%" value={deal.gorduraPct ?? "8"} onChange={(e) => set("gorduraPct", e.target.value)} />,
                     "gorduraPct",
@@ -652,9 +677,10 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
                   )}
                 </div>
                 <p className="microlabel" style={{ marginTop: 8 }}>
-                  A <strong>gordura de segurança</strong> já entra automaticamente no custo pra cobrir desperdício de produto, pano/ferramenta
-                  estragada e imprevisto na obra — assim o preço sugerido já nasce protegido. Deixe o valor final em branco pra usar o preço
-                  sugerido calculado abaixo.
+                  O <strong>imposto</strong> (ex: alíquota do Simples Nacional) é calculado sobre o preço de venda, não sobre o custo — por isso
+                  entra junto com a margem na hora de calcular o preço sugerido, igual um markup. A <strong>gordura de segurança</strong> já
+                  entra automaticamente no custo pra cobrir desperdício de produto, pano/ferramenta estragada e imprevisto na obra. Deixe o valor
+                  final em branco pra usar o preço sugerido calculado abaixo.
                 </p>
               </div>
             </div>
@@ -758,8 +784,6 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
         <p>{formatBRL(calc.apoioTotal)}</p>
         <p className="microlabel">Materiais ({(calc.materialPct * 100).toFixed(0)}%)</p>
         <p>{formatBRL(calc.materiaisTotal)}</p>
-        <p className="microlabel">Impostos</p>
-        <p>{formatBRL(calc.impostoTotal)}</p>
         {calc.gorduraValor > 0 && (
           <>
             <p className="microlabel">Gordura de segurança</p>
@@ -768,6 +792,12 @@ export default function QuoteForm({ initialDeal, company, obraNumero, onSave, on
         )}
         <p className="microlabel">Custo operacional total</p>
         <p>{formatBRL(calc.custosOperacionais)}</p>
+        {calc.impostoTotal > 0 && (
+          <>
+            <p className="microlabel">Imposto sobre a venda</p>
+            <p>{formatBRL(calc.impostoTotal)}</p>
+          </>
+        )}
         <hr style={{ borderColor: "var(--n-800)" }} />
         <p className="microlabel">Preço sugerido</p>
         <p style={{ fontSize: 22, fontWeight: 700, color: "var(--amber-400)" }}>{formatBRL(calc.valorFinal)}</p>

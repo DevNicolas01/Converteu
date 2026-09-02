@@ -58,9 +58,12 @@ function daysSince(iso: string | null | undefined) {
 }
 
 function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowUpDate, onSetPagamento }: Props & { deal: Deal }) {
-  const { alertDialog } = useDialog();
+  const { alertDialog, confirmDialog } = useDialog();
   const isDecided = deal.stage === "fechado" || deal.stage === "perdido";
   const [presenting, setPresenting] = useState(false);
+  // Feedback do botão "PDF": sem isso, clicar não dava nenhum sinal de que algo aconteceu
+  // (gerar o PDF é assíncrono e silencioso por padrão).
+  const [pdfState, setPdfState] = useState<"idle" | "loading" | "done">("idle");
   // Recolhido por padrão pra todo mundo -- com muitas propostas na coluna, deixar tudo aberto
   // vira uma parede de campos. As pílulas de status ficam sempre visíveis (é a ação mais usada),
   // o resto (follow-up, pagamento, mensagem) só aparece ao expandir.
@@ -103,6 +106,19 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
     window.location.href = `mailto:${deal.clienteEmail}?subject=${subject}&body=${body}`;
   }
 
+  async function handleDownloadPdf() {
+    setPdfState("loading");
+    try {
+      await downloadClientPdf(deal, company, deal.obraNumero || 1);
+      setPdfState("done");
+      setTimeout(() => setPdfState("idle"), 2000);
+    } catch (err) {
+      console.error("Falha ao gerar PDF", err);
+      setPdfState("idle");
+      await alertDialog("Não foi possível gerar o PDF. Tente de novo.");
+    }
+  }
+
   const sentDays = daysSince(deal.sentAt);
   const stageLabel = STAGES.find((s) => s.id === deal.stage)?.label || deal.stage;
   const placeLabel = deal.obraNome || deal.endereco || "";
@@ -115,6 +131,25 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
       patch.valorPago = String(valorFinalNum);
     }
     onSetPagamento(deal, patch);
+  }
+
+  // "Fechado" e "Perdido" são decisões com peso (entram nos relatórios, "Fechado" libera o
+  // registro de pagamento) -- um toque sem querer numa pílula não pode virar isso sozinho, então
+  // pedimos confirmação só nessas duas, sem travar as trocas mais leves ("Em aberto"/"Aguardando").
+  async function handleStageClick(stageId: string) {
+    if (stageId === deal.stage) return;
+    if (stageId === "fechado" || stageId === "perdido") {
+      const label = STAGES.find((s) => s.id === stageId)?.label || stageId;
+      const nome = deal.clientName || "cliente sem nome";
+      const ok = await confirmDialog(
+        stageId === "fechado"
+          ? `Marcar a proposta de ${nome} como Fechado? Ela passa a contar como venda concluída nos relatórios.`
+          : `Marcar a proposta de ${nome} como Perdido?`,
+        { title: `Mudar status para "${label}"`, confirmLabel: "Confirmar", cancelLabel: "Cancelar", tone: stageId === "perdido" ? "danger" : "default" },
+      );
+      if (!ok) return;
+    }
+    onChangeStage(deal, stageId);
   }
 
   const initial = (deal.clientName || "?").trim().charAt(0).toUpperCase();
@@ -166,7 +201,7 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
             type="button"
             className={`stage-pill${deal.stage === s.id ? " active" : ""}`}
             aria-pressed={deal.stage === s.id}
-            onClick={() => onChangeStage(deal, s.id)}
+            onClick={() => handleStageClick(s.id)}
           >
             {s.label}
           </button>
@@ -291,8 +326,8 @@ function DealCard({ deal, company, onEdit, onDelete, onChangeStage, onSetFollowU
               <button type="button" className="icon-action-btn" onClick={sendEmail}>
                 E-mail
               </button>
-              <button type="button" className="icon-action-btn" onClick={() => downloadClientPdf(deal, company, deal.obraNumero || 1)}>
-                PDF
+              <button type="button" className="icon-action-btn" onClick={handleDownloadPdf} disabled={pdfState === "loading"}>
+                {pdfState === "loading" ? "Gerando..." : pdfState === "done" ? "✓ Baixado" : "PDF"}
               </button>
               <button
                 type="button"

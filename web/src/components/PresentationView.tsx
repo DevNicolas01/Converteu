@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { calcDeal, formatBRL, type Deal } from "../lib/calc";
 
 interface Props {
@@ -94,7 +95,10 @@ export default function PresentationView({ deal, companyName, logoUrl, onClose }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slides.length]);
 
-  return (
+  // Portal pra <body>: sem isso, o overlay "position: fixed" fica preso dentro de qualquer
+  // ancestral com transform/filter (ex: o hover do card no Kanban), que vira um novo containing
+  // block e faz a apresentação renderizar espremida dentro do card em vez de em tela cheia.
+  return createPortal(
     <div
       className="pres-overlay"
       onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
@@ -127,6 +131,7 @@ export default function PresentationView({ deal, companyName, logoUrl, onClose }
           ›
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

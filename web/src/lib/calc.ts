@@ -49,7 +49,9 @@ export interface Deal {
 
   visitaTecnica: string;
   rateioAdm: string;
-  valorNota: string;
+  /** % de imposto sobre o preço de venda (ex: alíquota do Simples Nacional) -- entra junto com a
+   * margem na conta do preço sugerido, igual um markup, porque imposto sobre serviço incide sobre
+   * o que o cliente paga, não sobre o custo. */
   impostoPct: string;
   /** % extra sobre o custo total pra cobrir desperdício de produto, pano estragado, imprevisto na obra etc. */
   gorduraPct: string;
@@ -169,7 +171,6 @@ export function emptyDeal(): Deal {
 
     visitaTecnica: "",
     rateioAdm: "",
-    valorNota: "",
     impostoPct: "",
     gorduraPct: "8",
     valorPagamento: "",
@@ -238,6 +239,13 @@ export function usedForPlanLimit(deals: { createdAt: string }[], planId: string 
 export function num(v: unknown): number {
   const n = parseFloat(String(v));
   return isNaN(n) ? 0 : n;
+}
+
+/** Arredonda pra centavos -- sem isso, somar/subtrair valores com dízima de ponto flutuante
+ * (ex: em Resultados, faturado - custos) pode fechar 1 centavo "errado" mesmo com a matemática
+ * certa, porque cada valor é arredondado pra exibição de forma independente. */
+export function roundCents(v: number): number {
+  return Math.round((v + Number.EPSILON) * 100) / 100;
 }
 
 export function formatBRL(value: number | undefined | null): string {
@@ -318,55 +326,62 @@ function materialPercent(base: number) {
 export function calcDeal(d: Deal) {
   const dias = num(d.dias);
 
-  const vtTotal = dias * num(d.vtQtd) * num(d.vtValor);
-  const almocoTotal = dias * num(d.almocoQtd) * num(d.almocoValor);
+  const vtTotal = roundCents(dias * num(d.vtQtd) * num(d.vtValor));
+  const almocoTotal = roundCents(dias * num(d.almocoQtd) * num(d.almocoValor));
   const estacionamento = num(d.estacionamento);
   const pedagio = num(d.pedagio);
-  const combustivelTotal =
-    num(d.combKmPorLitro) > 0 ? dias * (num(d.combKmRodar) / num(d.combKmPorLitro)) * num(d.combValorLitro) : 0;
-  const apoioTotal = vtTotal + almocoTotal + estacionamento + pedagio + combustivelTotal;
+  const combustivelTotal = roundCents(
+    num(d.combKmPorLitro) > 0 ? dias * (num(d.combKmRodar) / num(d.combKmPorLitro)) * num(d.combValorLitro) : 0,
+  );
+  const apoioTotal = roundCents(vtTotal + almocoTotal + estacionamento + pedagio + combustivelTotal);
 
   let maoDeObraTotal = 0;
   ROLES.forEach((r) => {
     maoDeObraTotal += num(d.qtd[r.key]) * num(d.diaria[r.key]) * dias;
   });
+  maoDeObraTotal = roundCents(maoDeObraTotal);
 
   // Encargos (INSS/FGTS/férias/13º) incidem sobre a mão de obra; pró-labore é o que o dono
   // precisa receber, separado do lucro -- as duas coisas que quem não tem contador mais esquece
   // de colocar na conta, e por isso acaba trabalhando por menos do que devia.
-  const encargosTotal = maoDeObraTotal * (num(d.encargosPct) / 100);
+  const encargosTotal = roundCents(maoDeObraTotal * (num(d.encargosPct) / 100));
   const proLaboreTotal = num(d.proLabore);
 
   const baseParaMaterial = maoDeObraTotal + encargosTotal + proLaboreTotal + apoioTotal + num(d.rateioAdm) + num(d.visitaTecnica);
   const materialPct = d.materialPctManual !== "" && d.materialPctManual != null
     ? num(d.materialPctManual) / 100
     : materialPercent(baseParaMaterial);
-  const custoProdutos = (d.produtos || []).reduce((s, p) => s + num(p.quantidade || "1") * num(p.valorUnitario), 0);
-  const materiaisTotal = baseParaMaterial * materialPct + custoProdutos;
+  const custoProdutos = roundCents((d.produtos || []).reduce((s, p) => s + num(p.quantidade || "1") * num(p.valorUnitario), 0));
+  const materiaisTotal = roundCents(baseParaMaterial * materialPct + custoProdutos);
 
-  const impostoPct = num(d.impostoPct);
-  const impostoTotal = num(d.valorNota) * (impostoPct / 100);
-
-  const custosAntesDaGordura = baseParaMaterial + materiaisTotal + impostoTotal;
+  const custosAntesDaGordura = roundCents(baseParaMaterial + materiaisTotal);
 
   // "Gordura de segurança": cobre desperdício de produto, pano/ferramenta estragada e imprevisto
   // na obra -- entra automaticamente no custo, então o preço sugerido já nasce protegido em vez
   // de depender de o usuário lembrar de "arredondar pra cima".
   const gorduraPct = num(d.gorduraPct) / 100;
-  const gorduraValor = custosAntesDaGordura * gorduraPct;
-  const custosOperacionais = custosAntesDaGordura + gorduraValor;
+  const gorduraValor = roundCents(custosAntesDaGordura * gorduraPct);
+  const custosOperacionais = roundCents(custosAntesDaGordura + gorduraValor);
 
+  // Imposto (ex: alíquota do Simples Nacional) incide sobre o preço de venda, não sobre o custo --
+  // por isso entra na mesma conta de "markup" da margem, em vez de ser somado aos custos antes de
+  // calcular o preço (senão o valor digitado em % nunca refletia no preço final).
   const margem = Math.min(num(d.margem) / 100, 0.95);
-  const precoVendaSugerido = margem < 1 ? custosOperacionais / (1 - margem) : custosOperacionais;
-  const lucroRS = precoVendaSugerido - custosOperacionais;
+  const impostoPct = Math.min(num(d.impostoPct) / 100, 0.5);
+  const percentualSobreVenda = Math.min(margem + impostoPct, 0.95);
+  const precoVendaSugerido = roundCents(
+    percentualSobreVenda < 1 ? custosOperacionais / (1 - percentualSobreVenda) : custosOperacionais,
+  );
 
   const valorPagamento = d.valorPagamento !== "" && d.valorPagamento != null ? num(d.valorPagamento) : precoVendaSugerido;
 
-  const valorFinal = valorPagamento;
-  const margemReal = valorFinal > 0 ? (valorFinal - custosOperacionais) / valorFinal : 0;
-  const markupRealFinal = custosOperacionais > 0 ? (valorFinal - custosOperacionais) / custosOperacionais : 0;
+  const valorFinal = roundCents(valorPagamento);
+  const impostoTotal = roundCents(valorFinal * impostoPct);
+  const lucroRS = roundCents(valorFinal - custosOperacionais - impostoTotal);
+  const margemReal = valorFinal > 0 ? (valorFinal - custosOperacionais - impostoTotal) / valorFinal : 0;
+  const markupRealFinal = custosOperacionais > 0 ? (valorFinal - custosOperacionais - impostoTotal) / custosOperacionais : 0;
   const metragem = num(d.metragem);
-  const custoPorM2 = metragem > 0 ? custosOperacionais / metragem : 0;
+  const custoPorM2 = metragem > 0 ? roundCents(custosOperacionais / metragem) : 0;
   const margemAbaixoDoSaudavel = valorFinal > 0 && margemReal < MARGEM_MINIMA_SAUDAVEL;
 
   return {
