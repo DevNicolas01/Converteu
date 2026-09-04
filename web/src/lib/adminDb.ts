@@ -9,8 +9,9 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth, db, firebaseConfig } from "./firebase";
+import { sendBrandedAuthEmail } from "./db";
 
 const CLOSED_STAGE = "fechado";
 const LOST_STAGE = "perdido";
@@ -92,7 +93,7 @@ export async function adminListAdmins(): Promise<AdminEntry[]> {
 export async function adminAddAdmin(email: string) {
   const uid = await createAuthUserWithoutSignIn(email);
   await setDoc(doc(db, "admins", uid), { email, addedAt: Timestamp.now() });
-  await sendPasswordResetEmail(auth, email);
+  await sendBrandedAuthEmail(email, "invite");
   return { uid };
 }
 
@@ -121,7 +122,7 @@ export async function adminCreateTestAccount(companyName: string, email: string,
     createdAt: Timestamp.now(),
   });
   await setDoc(doc(db, "accounts", uid, "companyProfile", "profile"), { companyName: companyName.trim() }, { merge: true });
-  await sendPasswordResetEmail(auth, email);
+  await sendBrandedAuthEmail(email, "invite");
   return { uid };
 }
 

@@ -9,8 +9,38 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, db, storage } from "./firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, storage, functions } from "./firebase";
 import type { Deal } from "./calc";
+
+/**
+ * E-mail de "definir senha" (conta nova) ou "redefinir senha" (esqueci a minha), com a marca da
+ * Arrow Shot, mandado via Resend pela function sendAuthEmail -- no lugar do e-mail padrão do
+ * Firebase, que ainda sai com o nome antigo do projeto ("Converteu") e cai fácil em spam por sair
+ * de um domínio genérico sem SPF/DKIM configurado por nós.
+ */
+export async function sendBrandedAuthEmail(email: string, type: "reset" | "invite") {
+  const call = httpsCallable(functions, "sendAuthEmail");
+  await call({ email, type });
+}
+
+// Oferta de lançamento: link de checkout único na Kiwify (sem grade de planos) -- cola aqui assim
+// que o Nicolas mandar. Enquanto estiver vazio, quem tem pagamento pendente fica na tela de
+// "acesso bloqueado" sem next step (nada quebra, só não tem pra onde redirecionar ainda).
+export const KIWIFY_CHECKOUT_URL = "";
+
+/**
+ * Link de checkout da Kiwify com o accountId no parâmetro de rastreamento "s1" -- a Kiwify
+ * devolve esse valor de volta no payload do webhook (ver web/api/kiwify-webhook.ts), e é assim
+ * que a gente sabe pra qual conta liberar o acesso depois que o pagamento é confirmado. Sem isso,
+ * não teria como saber automaticamente quem pagou o quê.
+ */
+export function buildKiwifyCheckoutUrl(accountId: string): string | null {
+  if (!KIWIFY_CHECKOUT_URL) return null;
+  const url = new URL(KIWIFY_CHECKOUT_URL);
+  url.searchParams.set("s1", accountId);
+  return url.toString();
+}
 
 export interface AccountStatus {
   companyName?: string;

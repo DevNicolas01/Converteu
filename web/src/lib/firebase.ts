@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 // Mesmo app Web registrado no Firebase (converteu-dec78) usado pela versão anterior do site.
 const firebaseConfig = {
@@ -17,6 +18,7 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app);
 // Por padrão o SDK insiste por até 2min num upload que está falhando (ex: CORS mal configurado)
 // antes de desistir — a pessoa fica olhando "Salvando..." esse tempo todo. 15s já é generoso
 // pra uma rede normal e dá feedback rápido quando algo está errado de verdade.

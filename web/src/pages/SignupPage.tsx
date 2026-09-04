@@ -3,15 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import { saveCompanyProfile } from "../lib/db";
+import { saveCompanyProfile, buildKiwifyCheckoutUrl } from "../lib/db";
 import { formatCpfCnpj, formatBRL } from "../lib/calc";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
 // Teste de oferta: preço único, sem planos/limites, pra validar se o app vende antes de
 // reativar a grade de planos normal (Start/Converte/Ilimitado). O checkout roda na Kiwify em
-// vez do Asaas -- assim que o Nicolas mandar o link, cola aqui.
-const OFERTA_PRECO = 27.9;
-const KIWIFY_CHECKOUT_URL = "";
+// vez do Asaas -- o link fica em lib/db.ts (KIWIFY_CHECKOUT_URL).
+const OFERTA_PRECO = 29.9;
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
@@ -46,9 +45,10 @@ export default function SignupPage() {
     setError("");
     setSubmitting(true);
 
+    let uid: string;
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const uid = cred.user.uid;
+      uid = cred.user.uid;
       await setDoc(doc(db, "accounts", uid), {
         companyName: companyName.trim(),
         email: email.trim(),
@@ -78,9 +78,11 @@ export default function SignupPage() {
     }
 
     // A conta já existe nesse ponto (login + doc criados) -- se não tiver link da Kiwify
-    // configurado ainda, manda pro app, que mostra a tela de "assinatura pendente".
-    if (KIWIFY_CHECKOUT_URL) {
-      window.location.href = KIWIFY_CHECKOUT_URL;
+    // configurado ainda, manda pro app, que mostra a tela de "assinatura pendente" (com o mesmo
+    // botão de ir pro checkout, pra tentar de novo mais tarde).
+    const checkoutUrl = buildKiwifyCheckoutUrl(uid);
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
     } else {
       navigate("/");
     }

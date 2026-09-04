@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { sendBrandedAuthEmail } from "../lib/db";
 import { useAuth } from "../context/useAuth";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
 
@@ -39,12 +38,12 @@ export default function LoginPage({ adminHint = false }: { adminHint?: boolean }
     setResetError(false);
     setResetMsg("");
     try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setResetMsg("Enviamos um e-mail com o link pra redefinir sua senha.");
+      await sendBrandedAuthEmail(email.trim(), "reset");
+      setResetMsg("Se esse e-mail tiver uma conta, você vai receber um link pra redefinir a senha.");
     } catch (err) {
       console.error("Falha ao enviar e-mail de redefinição de senha", err);
       setResetError(true);
-      setResetMsg("Não foi possível enviar. Confira se o e-mail está certo.");
+      setResetMsg("Não foi possível enviar agora. Tente de novo em instantes.");
     } finally {
       setSendingReset(false);
     }

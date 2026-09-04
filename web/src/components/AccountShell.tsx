@@ -8,6 +8,7 @@ import {
   getCompanyProfile,
   saveCompanyProfile,
   uploadCompanyLogo,
+  buildKiwifyCheckoutUrl,
   ProposalLimitError,
   type AccountStatus,
   type CompanyProfile,
@@ -45,7 +46,6 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loadErr, setLoadErr] = useState("");
-  const [startingCheckout, setStartingCheckout] = useState(false);
   const [tab, setTab] = useState<Tab>("calc");
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
@@ -119,29 +119,16 @@ export default function AccountShell({ accountId, asAdmin = false }: { accountId
             <button
               className="save-btn"
               style={{ width: "100%", marginBottom: 8 }}
-              disabled={startingCheckout}
               onClick={async () => {
-                setStartingCheckout(true);
-                try {
-                  const res = await fetch("/api/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      accountId,
-                      email: status.email,
-                      plan: status.plan || "start",
-                      billingCycle: status.billingCycle || "mensal",
-                    }),
-                  });
-                  const { url } = await res.json();
-                  window.location.href = url;
-                } catch {
-                  setStartingCheckout(false);
-                  await alertDialog("Não foi possível abrir o pagamento. Tente de novo.");
+                const checkoutUrl = buildKiwifyCheckoutUrl(accountId);
+                if (!checkoutUrl) {
+                  await alertDialog("O link de pagamento ainda não foi configurado. Fale com o suporte.");
+                  return;
                 }
+                window.location.href = checkoutUrl;
               }}
             >
-              {startingCheckout ? "Abrindo pagamento..." : "Assinar agora"}
+              Assinar agora
             </button>
           )}
           {!asAdmin && (
